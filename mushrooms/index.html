@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mushroom Catalog — Holly Hill 🍄</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0D0A; --void-2:#12160F; --mist:rgba(230,235,220,0.06);
+    --ink:#0A0D0A; --white:#F4F1E6;
+    --display:'Anton', sans-serif;
+    --body:'Poppins', -apple-system, sans-serif;
+    --mono:'JetBrains Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--void); color:var(--white); font-family:var(--body); }
+  a{ color:inherit; } img,svg{ display:block; max-width:100%; }
+  button{ font:inherit; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+  }
+  a:focus-visible, button:focus-visible{ outline:3px solid #E8B84B; outline-offset:3px; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+
+  .grain{
+    position:fixed; inset:0; z-index:80; pointer-events:none; opacity:0.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+  }
+  .mist-scene{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+  .mote{ position:absolute; bottom:-10px; width:3px; height:3px; border-radius:50%; background:radial-gradient(circle,#E8DCC2,rgba(232,220,194,0)); opacity:0; animation:moteRise linear infinite; }
+  @keyframes moteRise{ 0%{ transform:translate(0,0); opacity:0; } 15%{ opacity:0.5; } 85%{ opacity:0.2; } 100%{ transform:translate(16px,-100vh); opacity:0; } }
+
+  .stroke{ color:var(--white); text-shadow:0 0 30px currentColor, 0 0 60px rgba(232,184,75,0.35); }
+  .stroke-white{ color:var(--white); text-shadow:0 2px 24px rgba(0,0,0,0.6); }
+
+  /* ---------- header ---------- */
+  header{ position:relative; z-index:2; padding:44px 0 34px; text-align:center; background:radial-gradient(ellipse at 50% -20%, rgba(201,138,44,0.18), transparent 60%), var(--void); color:#fff; border-bottom:1px solid rgba(232,220,194,0.08); }
+  .backlink{ display:inline-block; font-family:var(--body); font-weight:700; font-size:13px; text-decoration:none; color:#fff; opacity:0.75; margin-bottom:18px; }
+  .backlink:hover{ opacity:1; }
+  header h1{ font-family:var(--display); font-size:clamp(38px,7vw,64px); margin:0 0 10px; letter-spacing:0.01em; }
+  header p{ font-family:var(--body); font-weight:600; color:#cfcfd6; max-width:46ch; margin:0 auto; font-size:15px; }
+
+  /* ---------- grid ---------- */
+  .catalog{ position:relative; z-index:2; padding:50px 0 70px; }
+  .grid{ display:grid; gap:24px; grid-template-columns:1fr; }
+  @media(min-width:640px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+  @media(min-width:980px){ .grid{ grid-template-columns:repeat(3,1fr); } }
+
+  .card{
+    border:1px solid rgba(232,220,194,0.1); background:var(--void-2);
+    border-radius:18px; padding:22px 20px 20px; cursor:pointer; text-align:left;
+    position:relative; overflow:hidden;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s ease, box-shadow .2s ease;
+  }
+  .card::before{
+    content:""; position:absolute; left:50%; top:38%; width:220px; height:220px; margin:-110px 0 0 -110px;
+    border-radius:50%; filter:blur(46px); background:var(--glow, #C98A2C); opacity:0.35;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .card:hover::before, .card:focus-visible::before{ opacity:0.55; transform:scale(1.15); }
+  .card:hover, .card:focus-visible{ transform:translateY(-6px); border-color:rgba(232,220,194,0.28); box-shadow:0 18px 40px rgba(0,0,0,0.45); }
+  .card:active{ transform:translateY(-2px); }
+  .card .num{ position:relative; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:0.08em; background:rgba(244,241,230,0.12); padding:4px 10px; border-radius:20px; display:inline-block; margin-bottom:10px; color:var(--white); }
+  .card .art{ position:relative; width:100px; margin:6px auto 4px; filter:drop-shadow(0 0 18px rgba(0,0,0,0.5)); }
+  .card h2{ position:relative; font-family:var(--display); font-size:26px; margin:6px 0 2px; text-align:center; color:var(--white); }
+  .card .latin{ position:relative; font-style:italic; font-weight:600; font-size:11.5px; text-align:center; opacity:0.7; margin-bottom:10px; }
+  .card .footer-row{ position:relative; display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+  .card .price{ font-family:var(--display); font-size:20px; color:var(--white); }
+  .card .tap{ font-family:var(--mono); font-size:10px; letter-spacing:0.06em; background:rgba(232,220,194,0.14); padding:5px 10px; border-radius:20px; }
+
+  .bg-shiitake{ --glow:#D98A3D; background:linear-gradient(160deg,#1C130A,var(--void-2)); }
+  .bg-oyster{ --glow:#7FA8C9; background:linear-gradient(160deg,#0E1A22,var(--void-2)); }
+  .bg-lionsmane{ --glow:#DCEEF5; background:linear-gradient(160deg,#0B1620,var(--void-2)); }
+  .bg-reishi{ --glow:#B5652E; background:linear-gradient(160deg,#1C0E10,var(--void-2)); }
+  .bg-kingoyster{ --glow:#9CB68C; background:linear-gradient(160deg,#121A0F,var(--void-2)); }
+  .bg-chestnut{ --glow:#C2703D; background:linear-gradient(160deg,#1A100A,var(--void-2)); }
+  .bg-winecap{ --glow:#9C2D52; background:linear-gradient(160deg,#1A0910,var(--void-2)); }
+
+  /* ---------- modal ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  .modal{
+    color:#fff; border-radius:22px; max-width:460px; width:100%; max-height:90vh; overflow-y:auto;
+    padding:34px 30px 30px; position:relative; text-align:center;
+    transform:scale(0.85) rotate(-2deg); opacity:0; transition:transform .28s cubic-bezier(.2,1.4,.3,1), opacity .2s ease;
+  }
+  .overlay.open .modal{ transform:scale(1) rotate(0deg); opacity:1; }
+  .modal-close{
+    position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
+    background:rgba(0,0,0,0.3); border:none; color:#fff; font-size:18px; cursor:pointer; line-height:1;
+  }
+  .modal-close:hover{ background:rgba(0,0,0,0.5); }
+  .modal .num{ font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:0.08em; background:rgba(244,241,230,0.12); padding:5px 12px; border-radius:20px; display:inline-block; margin-bottom:14px; }
+  .modal .art{ width:150px; margin:0 auto 8px; }
+  .modal h2{ font-family:var(--display); font-size:clamp(34px,6vw,48px); margin:6px 0 4px; line-height:0.95; }
+  .modal .latin{ font-style:italic; font-weight:600; font-size:13px; opacity:0.85; margin-bottom:14px; }
+  .modal .caption{ font-weight:800; font-size:17px; max-width:26ch; margin:0 auto 16px; line-height:1.3; }
+  .modal .facts{ display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+  .modal .fact{ font-family:var(--mono); font-size:12px; background:rgba(244,241,230,0.1); padding:8px 14px; border-radius:20px; }
+  .modal .price-stamp{
+    display:inline-block; font-family:var(--display); font-size:28px; color:#fff; background:rgba(0,0,0,0.35);
+    padding:8px 22px; border-radius:8px; border:2.5px solid #fff; transform:rotate(-3deg); margin-bottom:16px;
+  }
+  .modal .price-unit{ display:block; font-family:var(--mono); font-size:9.5px; letter-spacing:0.05em; margin-top:6px; }
+  .modal .how-made{ text-align:left; background:rgba(244,241,230,0.05); border:1px solid rgba(244,241,230,0.1); border-radius:14px; padding:16px 18px; }
+  .modal .how-made h3{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin:0 0 12px; color:var(--white); opacity:0.75; }
+  .modal .how-made ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .modal .how-made li{ display:flex; align-items:flex-start; gap:10px; font-size:13px; color:var(--white); opacity:0.92; line-height:1.4; }
+  .hm-num{
+    flex-shrink:0; width:20px; height:20px; border-radius:50%; background:var(--glow, #C98A2C);
+    color:#0A0D0A; font-family:var(--mono); font-weight:700; font-size:11px;
+    display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+
+  footer{ background:var(--ink); color:#fff; padding:40px 0; text-align:center; }
+  footer p{ color:#cfcfd6; max-width:44ch; margin:0 auto 20px; font-size:14px; }
+  .btn{ font-family:var(--body); font-weight:800; font-size:14px; text-decoration:none; padding:13px 26px; border-radius:40px; display:inline-block; margin:0 6px; }
+  .btn-primary{ background:#fff; color:var(--ink); }
+  .btn-ghost{ border:2px solid rgba(255,255,255,0.4); color:#fff; }
+</style>
+</head>
+<body>
+
+  <div class="grain"></div>
+  <div class="mist-scene">
+    <span class="mote" style="left:45.4%; animation-duration:18.7s; animation-delay:-1.8s;"></span>
+    <span class="mote" style="left:46.7%; animation-duration:18.1s; animation-delay:-9.9s;"></span>
+    <span class="mote" style="left:19.7%; animation-duration:18.1s; animation-delay:-8.9s;"></span>
+    <span class="mote" style="left:78.1%; animation-duration:13.1s; animation-delay:-16.7s;"></span>
+    <span class="mote" style="left:10.7%; animation-duration:21.7s; animation-delay:-7.4s;"></span>
+    <span class="mote" style="left:6.0%; animation-duration:23.8s; animation-delay:-0.8s;"></span>
+    <span class="mote" style="left:64.8%; animation-duration:19.4s; animation-delay:-20.2s;"></span>
+    <span class="mote" style="left:3.4%; animation-duration:18.3s; animation-delay:-22.6s;"></span>
+    <span class="mote" style="left:20.3%; animation-duration:14.9s; animation-delay:-23.3s;"></span>
+    <span class="mote" style="left:46.5%; animation-duration:17.3s; animation-delay:-3.8s;"></span>
+    <span class="mote" style="left:51.8%; animation-duration:19.7s; animation-delay:-12.0s;"></span>
+    <span class="mote" style="left:65.6%; animation-duration:17.5s; animation-delay:-17.3s;"></span>
+    <span class="mote" style="left:97.8%; animation-duration:23.9s; animation-delay:-3.8s;"></span>
+    <span class="mote" style="left:69.9%; animation-duration:15.8s; animation-delay:-18.5s;"></span>
+    <span class="mote" style="left:29.7%; animation-duration:12.8s; animation-delay:-5.6s;"></span>
+    <span class="mote" style="left:40.4%; animation-duration:22.2s; animation-delay:-14.7s;"></span>
+    <span class="mote" style="left:94.0%; animation-duration:22.2s; animation-delay:-24.0s;"></span>
+    <span class="mote" style="left:22.1%; animation-duration:22.9s; animation-delay:-12.7s;"></span>
+    <span class="mote" style="left:96.1%; animation-duration:16.8s; animation-delay:-22.2s;"></span>
+    <span class="mote" style="left:62.4%; animation-duration:21.3s; animation-delay:-17.5s;"></span>
+  </div>
+
+
+  <header>
+    <div class="wrap">
+      <a href="/" class="backlink">&larr; Holly Hill</a>
+      <h1 class="stroke-white">THE MUSHROOM<br>CATALOG 🍄</h1>
+      <p>Everything we grow, in small batches, on logs and blocks behind the house. Tap any specimen for the details.</p>
+    </div>
+  </header>
+
+  <main class="catalog">
+    <div class="wrap">
+      <div class="grid">
+
+        <button class="card bg-shiitake" data-target="d-shiitake">
+          <div class="num">01 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="70" y="66" width="20" height="26" rx="6" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+            <path d="M 13.63 45.00 C 12.11 39.80 15.50 34.55 17.76 29.78 C 20.01 25.02 23.02 20.01 27.15 16.43 C 31.28 12.86 37.06 10.29 42.54 8.34 C 48.01 6.39 54.18 4.75 60.00 4.76 C 65.82 4.77 71.98 6.44 77.43 8.41 C 82.87 10.39 88.53 13.04 92.66 16.60 C 96.79 20.17 99.92 25.07 102.20 29.80 C 104.49 34.53 107.88 39.80 106.37 45.00 C 104.85 50.20 97.54 58.33 93.12 61.00 C 88.70 63.67 84.29 61.00 79.87 61.00 C 75.46 61.00 71.04 61.00 66.62 61.00 C 62.21 61.00 57.79 61.00 53.38 61.00 C 48.96 61.00 44.54 61.00 40.13 61.00 C 35.71 61.00 31.30 63.67 26.88 61.00 C 22.46 58.33 15.15 50.20 13.63 45.00 Z"
+              fill="#fff" stroke="#0D0D0F" stroke-width="3.5" stroke-linejoin="round" transform="translate(10,5)"/>
+          </svg>
+          <h2>Shiitake</h2>
+          <div class="latin">Lentinula edodes</div>
+          <div class="footer-row"><span class="price">$14</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-oyster" data-target="d-oyster">
+          <div class="num">02 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <g stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round">
+              <path d="M80 70 C 55 68 38 52 42 32 C 44 20 58 14 74 18 C 80 30 82 52 80 70 Z" fill="#fff"/>
+              <path d="M80 70 C 100 66 116 48 110 28 C 106 16 92 12 78 18 C 76 30 76 52 80 70 Z" fill="#EAF9FF"/>
+              <path d="M80 68 C 62 64 50 50 54 36 C 56 27 66 23 78 27 C 80 38 80 56 80 68 Z" fill="#fff" opacity="0.92"/>
+            </g>
+          </svg>
+          <h2>Oyster</h2>
+          <div class="latin">Pleurotus ostreatus</div>
+          <div class="footer-row"><span class="price">$12</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-lionsmane" data-target="d-lionsmane">
+          <div class="num">03 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="80" cy="42" r="30" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+            <g stroke="#0D0D0F" stroke-width="2" stroke-linecap="round">
+              <line x1="55" y1="55" x2="52" y2="80"/><line x1="62" y1="62" x2="60" y2="86"/>
+              <line x1="70" y1="67" x2="69" y2="90"/><line x1="80" y1="70" x2="80" y2="92"/>
+              <line x1="90" y1="67" x2="91" y2="90"/><line x1="98" y1="62" x2="100" y2="86"/>
+              <line x1="105" y1="55" x2="108" y2="80"/><line x1="46" y1="45" x2="40" y2="64"/>
+              <line x1="114" y1="45" x2="120" y2="64"/>
+            </g>
+          </svg>
+          <h2>Lion's Mane</h2>
+          <div class="latin">Hericium erinaceus</div>
+          <div class="footer-row"><span class="price">$16</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-reishi" data-target="d-reishi">
+          <div class="num">04 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="20" y="78" width="120" height="12" fill="#000" opacity="0.25" rx="2"/>
+            <path d="M40 78 C 35 55 45 30 70 22 C 95 15 118 25 120 45 C 122 62 108 76 88 78 C 70 80 45 80 40 78 Z"
+              fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M52 74 C 48 58 56 40 72 34" fill="none" stroke="#0D0D0F" stroke-width="1.4" opacity="0.4"/>
+            <path d="M62 76 C 58 60 66 42 82 35" fill="none" stroke="#0D0D0F" stroke-width="1.4" opacity="0.4"/>
+            <path d="M72 77 C 70 62 78 44 92 37" fill="none" stroke="#0D0D0F" stroke-width="1.4" opacity="0.4"/>
+          </svg>
+          <h2>Reishi</h2>
+          <div class="latin">Ganoderma lingzhi</div>
+          <div class="footer-row"><span class="price">$10</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-kingoyster" data-target="d-kingoyster">
+          <div class="num">05 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M64 90 C 60 60 60 38 66 22 C 70 14 90 14 94 22 C 100 38 100 60 96 90 Z"
+              fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round"/>
+            <ellipse cx="80" cy="22" rx="22" ry="10" fill="#0D0D0F" stroke="#0D0D0F" stroke-width="3"/>
+          </svg>
+          <h2>King Oyster</h2>
+          <div class="latin">Pleurotus eryngii</div>
+          <div class="footer-row"><span class="price">$15</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-chestnut" data-target="d-chestnut">
+          <div class="num">06 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="72" y="66" width="16" height="24" rx="5" fill="#fff" stroke="#0D0D0F" stroke-width="2.5"/>
+            <rect x="46" y="70" width="13" height="20" rx="4" fill="#fff" stroke="#0D0D0F" stroke-width="2.2" transform="rotate(-6 46 70)"/>
+            <rect x="98" y="70" width="13" height="20" rx="4" fill="#fff" stroke="#0D0D0F" stroke-width="2.2" transform="rotate(6 98 70)"/>
+            <path d="M 41.80 60.00 C 40.38 56.10 43.07 52.13 44.73 48.57 C 46.39 45.01 48.72 41.31 51.78 38.63 C 54.83 35.94 59.03 33.91 63.07 32.45 C 67.10 30.99 71.69 29.86 76.00 29.87 C 80.31 29.87 84.89 31.02 88.91 32.49 C 92.93 33.97 97.06 36.04 100.11 38.72 C 103.17 41.40 105.57 45.03 107.25 48.58 C 108.93 52.13 111.61 56.10 110.20 60.00 C 108.80 63.90 102.60 70.00 98.80 72.00 C 95.00 74.00 91.20 72.00 87.40 72.00 C 83.60 72.00 79.80 72.00 76.00 72.00 C 72.20 72.00 68.40 72.00 64.60 72.00 C 60.80 72.00 57.00 74.00 53.20 72.00 C 49.40 70.00 43.21 63.90 41.80 60.00 Z"
+              fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round" transform="translate(4,-5)"/>
+          </svg>
+          <h2>Chestnut</h2>
+          <div class="latin">Pholiota adiposa</div>
+          <div class="footer-row"><span class="price">$12</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-winecap" data-target="d-winecap">
+          <div class="num">07 / 07</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="70" y="70" width="20" height="22" rx="6" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+            <path d="M 7.63 50.00 C 6.21 44.28 9.67 38.48 12.22 33.25 C 14.76 28.02 18.23 22.54 22.90 18.61 C 27.57 14.67 34.06 11.78 40.24 9.64 C 46.43 7.50 53.42 5.75 60.00 5.76 C 66.58 5.77 73.57 7.55 79.72 9.72 C 85.87 11.88 92.23 14.85 96.90 18.78 C 101.57 22.70 105.16 28.06 107.74 33.27 C 110.32 38.47 113.78 44.28 112.37 50.00 C 110.96 55.72 103.65 64.67 99.28 67.60 C 94.92 70.53 90.55 67.60 86.19 67.60 C 81.82 67.60 77.46 67.60 73.09 67.60 C 68.73 67.60 64.36 67.60 60.00 67.60 C 55.64 67.60 51.27 67.60 46.91 67.60 C 42.54 67.60 38.18 67.60 33.81 67.60 C 29.45 67.60 25.08 70.53 20.72 67.60 C 16.35 64.67 9.04 55.72 7.63 50.00 Z"
+              fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round" transform="translate(20,3)"/>
+          </svg>
+          <h2>Wine Cap</h2>
+          <div class="latin">Stropharia rugosoannulata</div>
+          <div class="footer-row"><span class="price">$10</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Prices are current as of listing, but everything's grown in small batches — message ahead to confirm what's actually fruiting.</p>
+      <a class="btn btn-primary" href="/#contact">Ask what's fresh &rarr;</a>
+      <a class="btn btn-ghost" href="/">&larr; Back to Holly Hill</a>
+    </div>
+  </footer>
+
+  <!-- ===== detail templates (hidden, cloned into modal on click) ===== -->
+  <template id="d-shiitake">
+    <div class="num">01 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><rect x="70" y="66" width="20" height="26" rx="6" fill="#fff" stroke="#0D0D0F" stroke-width="3"/><path d="M 13.63 45.00 C 12.11 39.80 15.50 34.55 17.76 29.78 C 20.01 25.02 23.02 20.01 27.15 16.43 C 31.28 12.86 37.06 10.29 42.54 8.34 C 48.01 6.39 54.18 4.75 60.00 4.76 C 65.82 4.77 71.98 6.44 77.43 8.41 C 82.87 10.39 88.53 13.04 92.66 16.60 C 96.79 20.17 99.92 25.07 102.20 29.80 C 104.49 34.53 107.88 39.80 106.37 45.00 C 104.85 50.20 97.54 58.33 93.12 61.00 C 88.70 63.67 84.29 61.00 79.87 61.00 C 75.46 61.00 71.04 61.00 66.62 61.00 C 62.21 61.00 57.79 61.00 53.38 61.00 C 48.96 61.00 44.54 61.00 40.13 61.00 C 35.71 61.00 31.30 63.67 26.88 61.00 C 22.46 58.33 15.15 50.20 13.63 45.00 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3.5" stroke-linejoin="round" transform="translate(10,5)"/></svg>
+    <h2>Shiitake</h2>
+    <div class="latin">Lentinula edodes</div>
+    <div class="caption">the one everyone already knows 🔥</div>
+    <div class="facts">
+      <div class="fact">🕰️ cultivated in Asia for 1,000+ years</div>
+      <div class="fact">📈 our #1 most requested, no contest</div>
+    </div>
+    <div class="price-stamp">$14<span class="price-unit">PER LB · FRESH</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Inoculated onto oak logs or hardwood sawdust blocks</li><li><span class="hm-num">2</span>Colonizes in the shade for several months</li><li><span class="hm-num">3</span>Fruits after a cold soak triggers pinning</li></ol></div>
+  </template>
+
+  <template id="d-oyster">
+    <div class="num">02 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><g stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round"><path d="M80 70 C 55 68 38 52 42 32 C 44 20 58 14 74 18 C 80 30 82 52 80 70 Z" fill="#fff"/><path d="M80 70 C 100 66 116 48 110 28 C 106 16 92 12 78 18 C 76 30 76 52 80 70 Z" fill="#EAF9FF"/><path d="M80 68 C 62 64 50 50 54 36 C 56 27 66 23 78 27 C 80 38 80 56 80 68 Z" fill="#fff" opacity="0.92"/></g></svg>
+    <h2>Oyster</h2>
+    <div class="latin">Pleurotus ostreatus</div>
+    <div class="caption">beginner mode: unlocked ⚡</div>
+    <div class="facts">
+      <div class="fact">⏱️ ready to harvest in 2&ndash;3 weeks</div>
+      <div class="fact">🪭 grows in clusters like little fans</div>
+    </div>
+    <div class="price-stamp">$12<span class="price-unit">PER LB · FRESH</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Spawn mixed into pasteurized straw or sawdust</li><li><span class="hm-num">2</span>Colonizes fast in the dark, 2–3 weeks</li><li><span class="hm-num">3</span>Fruits in clusters once exposed to light &amp; air</li></ol></div>
+  </template>
+
+  <template id="d-lionsmane">
+    <div class="num">03 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><circle cx="80" cy="42" r="30" fill="#fff" stroke="#0D0D0F" stroke-width="3"/><g stroke="#0D0D0F" stroke-width="2" stroke-linecap="round"><line x1="55" y1="55" x2="52" y2="80"/><line x1="62" y1="62" x2="60" y2="86"/><line x1="70" y1="67" x2="69" y2="90"/><line x1="80" y1="70" x2="80" y2="92"/><line x1="90" y1="67" x2="91" y2="90"/><line x1="98" y1="62" x2="100" y2="86"/><line x1="105" y1="55" x2="108" y2="80"/><line x1="46" y1="45" x2="40" y2="64"/><line x1="114" y1="45" x2="120" y2="64"/></g></svg>
+    <h2>Lion's Mane</h2>
+    <div class="latin">Hericium erinaceus</div>
+    <div class="caption">tastes like the ocean, looks like a snowball 🧠</div>
+    <div class="facts">
+      <div class="fact">❓ the one everyone asks about first</div>
+      <div class="fact">🍤 sears up like a scallop, no joke</div>
+    </div>
+    <div class="price-stamp">$16<span class="price-unit">PER LB · FRESH</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Inoculated onto hardwood sawdust blocks</li><li><span class="hm-num">2</span>Colonizes in a dark, humid space</li><li><span class="hm-num">3</span>Fruits into its signature spiny mass</li></ol></div>
+  </template>
+
+  <template id="d-reishi">
+    <div class="num">04 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="78" width="120" height="12" fill="#000" opacity="0.25" rx="2"/><path d="M40 78 C 35 55 45 30 70 22 C 95 15 118 25 120 45 C 122 62 108 76 88 78 C 70 80 45 80 40 78 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round"/><path d="M52 74 C 48 58 56 40 72 34" fill="none" stroke="#0D0D0F" stroke-width="1.4" opacity="0.4"/><path d="M62 76 C 58 60 66 42 82 35" fill="none" stroke="#0D0D0F" stroke-width="1.4" opacity="0.4"/><path d="M72 77 C 70 62 78 44 92 37" fill="none" stroke="#0D0D0F" stroke-width="1.4" opacity="0.4"/></svg>
+    <h2>Reishi</h2>
+    <div class="latin">Ganoderma lingzhi</div>
+    <div class="caption">not for the pan. for the pot. ☕</div>
+    <div class="facts">
+      <div class="fact">🍵 steeped for tea, not sautéed</div>
+      <div class="fact">✨ shiny, woody, used for centuries</div>
+    </div>
+    <div class="price-stamp">$10<span class="price-unit">PER DRIED PIECE</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Inoculated onto hardwood logs or blocks</li><li><span class="hm-num">2</span>Grows slowly over several months</li><li><span class="hm-num">3</span>Forms a hard, glossy bracket, then dried</li></ol></div>
+  </template>
+
+  <template id="d-kingoyster">
+    <div class="num">05 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M64 90 C 60 60 60 38 66 22 C 70 14 90 14 94 22 C 100 38 100 60 96 90 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round"/><ellipse cx="80" cy="22" rx="22" ry="10" fill="#0D0D0F" stroke="#0D0D0F" stroke-width="3"/></svg>
+    <h2>King Oyster</h2>
+    <div class="latin">Pleurotus eryngii</div>
+    <div class="caption">the "meatiest" mushroom we grow 🍖</div>
+    <div class="facts">
+      <div class="fact">💪 thick stem, small cap, big texture</div>
+      <div class="fact">🦪 the closest thing to a scallop swap</div>
+    </div>
+    <div class="price-stamp">$15<span class="price-unit">PER LB · FRESH</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Grown on a grain &amp; sawdust substrate block</li><li><span class="hm-num">2</span>Needs high humidity to form its thick stem</li><li><span class="hm-num">3</span>Hand-thinned so each cluster grows large</li></ol></div>
+  </template>
+
+  <template id="d-chestnut">
+    <div class="num">06 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><rect x="72" y="66" width="16" height="24" rx="5" fill="#fff" stroke="#0D0D0F" stroke-width="2.5"/><rect x="46" y="70" width="13" height="20" rx="4" fill="#fff" stroke="#0D0D0F" stroke-width="2.2" transform="rotate(-6 46 70)"/><rect x="98" y="70" width="13" height="20" rx="4" fill="#fff" stroke="#0D0D0F" stroke-width="2.2" transform="rotate(6 98 70)"/><path d="M 41.80 60.00 C 40.38 56.10 43.07 52.13 44.73 48.57 C 46.39 45.01 48.72 41.31 51.78 38.63 C 54.83 35.94 59.03 33.91 63.07 32.45 C 67.10 30.99 71.69 29.86 76.00 29.87 C 80.31 29.87 84.89 31.02 88.91 32.49 C 92.93 33.97 97.06 36.04 100.11 38.72 C 103.17 41.40 105.57 45.03 107.25 48.58 C 108.93 52.13 111.61 56.10 110.20 60.00 C 108.80 63.90 102.60 70.00 98.80 72.00 C 95.00 74.00 91.20 72.00 87.40 72.00 C 83.60 72.00 79.80 72.00 76.00 72.00 C 72.20 72.00 68.40 72.00 64.60 72.00 C 60.80 72.00 57.00 74.00 53.20 72.00 C 49.40 70.00 43.21 63.90 41.80 60.00 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round" transform="translate(4,-5)"/></svg>
+    <h2>Chestnut</h2>
+    <div class="latin">Pholiota adiposa</div>
+    <div class="caption">small cluster. big flavor. 🌰</div>
+    <div class="facts">
+      <div class="fact">🍲 holds its shape in soups &amp; stir-fry</div>
+      <div class="fact">🌳 nutty, firm, grows in tight bunches</div>
+    </div>
+    <div class="price-stamp">$12<span class="price-unit">PER LB · FRESH</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Inoculated onto hardwood sawdust blocks</li><li><span class="hm-num">2</span>Colonizes in tight clusters</li><li><span class="hm-num">3</span>Fruits in flushes, harvested by the bunch</li></ol></div>
+  </template>
+
+  <template id="d-winecap">
+    <div class="num">07 / 07</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><rect x="70" y="70" width="20" height="22" rx="6" fill="#fff" stroke="#0D0D0F" stroke-width="3"/><path d="M 7.63 50.00 C 6.21 44.28 9.67 38.48 12.22 33.25 C 14.76 28.02 18.23 22.54 22.90 18.61 C 27.57 14.67 34.06 11.78 40.24 9.64 C 46.43 7.50 53.42 5.75 60.00 5.76 C 66.58 5.77 73.57 7.55 79.72 9.72 C 85.87 11.88 92.23 14.85 96.90 18.78 C 101.57 22.70 105.16 28.06 107.74 33.27 C 110.32 38.47 113.78 44.28 112.37 50.00 C 110.96 55.72 103.65 64.67 99.28 67.60 C 94.92 70.53 90.55 67.60 86.19 67.60 C 81.82 67.60 77.46 67.60 73.09 67.60 C 68.73 67.60 64.36 67.60 60.00 67.60 C 55.64 67.60 51.27 67.60 46.91 67.60 C 42.54 67.60 38.18 67.60 33.81 67.60 C 29.45 67.60 25.08 70.53 20.72 67.60 C 16.35 64.67 9.04 55.72 7.63 50.00 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3" stroke-linejoin="round" transform="translate(20,3)"/></svg>
+    <h2>Wine Cap</h2>
+    <div class="latin">Stropharia rugosoannulata</div>
+    <div class="caption">named for the color, not the taste 🍷</div>
+    <div class="facts">
+      <div class="fact">🪵 grows right in the wood-chip beds</div>
+      <div class="fact">😌 big caps, mild flavor, very forgiving</div>
+    </div>
+    <div class="price-stamp">$10<span class="price-unit">PER LB · FRESH</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Spawn mixed directly into wood chips outdoors</li><li><span class="hm-num">2</span>Left to colonize the bed over the season</li><li><span class="hm-num">3</span>Fruits after rain, right in the garden</li></ol></div>
+  </template>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalHeading">
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+    var overlay = document.getElementById('overlay');
+    var modalContent = document.getElementById('modalContent');
+    var modalClose = document.getElementById('modalClose');
+    var lastFocused = null;
+
+    var bgMap = {
+      'd-shiitake':'bg-shiitake','d-oyster':'bg-oyster','d-lionsmane':'bg-lionsmane',
+      'd-reishi':'bg-reishi','d-kingoyster':'bg-kingoyster','d-chestnut':'bg-chestnut','d-winecap':'bg-winecap'
+    };
+
+    function openModal(targetId, triggerEl){
+      var tpl = document.getElementById(targetId);
+      if (!tpl) return;
+      modalContent.innerHTML = '';
+      modalContent.appendChild(tpl.content.cloneNode(true));
+      document.getElementById('modal').className = 'modal ' + (bgMap[targetId] || '');
+      lastFocused = triggerEl;
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      modalClose.focus();
+    }
+    function closeModal(){
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+      if (lastFocused) lastFocused.focus();
+    }
+
+    document.querySelectorAll('.card').forEach(function(card){
+      card.addEventListener('click', function(){
+        openModal(card.dataset.target, card);
+      });
+    });
+    modalClose.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+    });
+  </script>
+
+</body>
+</html>
