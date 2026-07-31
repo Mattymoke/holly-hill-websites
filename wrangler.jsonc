@@ -1,8 +1,19 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "gentle-sound-009f",
-  "compatibility_date": "2026-07-31",
-  "assets": {
-    "directory": "./"
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "gentle-sound-009f",
+	"compatibility_date": "2026-07-31",
+	"main": "src/index.js",
+	"assets": {
+		"directory": "./",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		
+		{
+			"binding": "DB",
+			"database_name": "holly-hill-shop",
+			"database_id": "0dd0660c-7aec-4e78-abe4-772322c5daf5",
+			"remote": true
+		}
+	]
 }
