@@ -15,7 +15,7 @@
 //   wrangler secret put STRIPE_WEBHOOK_SECRET
 //   wrangler secret put CLERK_SECRET_KEY
 
-import { createClerkClient } from "@clerk/backend";
+import { verifyToken } from "@clerk/backend";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -25,15 +25,16 @@ function json(data, status = 200) {
 }
 
 async function getAuthedUserId(request, env) {
-  const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
+  const authHeader = request.headers.get("Authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return null;
   try {
-    const { isSignedIn, toAuth } = await clerk.authenticateRequest(request, {
-      // Adjust to your real domain once this is live
-      authorizedParties: ["https://hollyhillohio.com"],
+    const payload = await verifyToken(token, {
+      secretKey: env.CLERK_SECRET_KEY,
     });
-    if (!isSignedIn) return null;
-    return toAuth().userId;
+    return payload.sub;
   } catch (err) {
+    console.error("Clerk token verification failed:", err.message);
     return null;
   }
 }
