@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Confirmed — Holly Hill Surplus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0912; --void-2:#141126; --pink:#FF2E9A; --violet:#8A4FFF; --cyan:#2BE8DC;
+    --paper:#F5F3FA; --muted:#9A93B5; --line:rgba(245,243,250,0.1);
+    --grad: linear-gradient(90deg, var(--pink), var(--violet) 52%, var(--cyan));
+    --display:'Rajdhani', sans-serif; --body:'Work Sans', -apple-system, sans-serif; --mono:'IBM Plex Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--void); color:var(--paper); font-family:var(--body); }
+  a{ color:inherit; }
+  body{ display:flex; align-items:center; justify-content:center; padding:24px; text-align:center; }
+  a:focus-visible{ outline:3px solid var(--cyan); outline-offset:3px; }
+
+  .card{
+    max-width:480px; background:linear-gradient(160deg, rgba(29,24,48,0.7), rgba(20,17,38,0.7));
+    backdrop-filter:blur(16px); border:1px solid rgba(43,232,220,0.3); border-radius:16px; padding:44px 32px;
+  }
+  .check{
+    width:56px; height:56px; margin:0 auto 20px; border-radius:50%; background:var(--grad);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .check svg{ width:28px; height:28px; }
+  h1{ font-family:var(--display); font-weight:700; font-size:30px; margin:0 0 12px; }
+  p{ color:var(--muted); font-size:14.5px; margin:0 0 24px; line-height:1.6; }
+  .order-id{ font-family:var(--mono); font-size:12px; color:var(--cyan); background:rgba(43,232,220,0.08); padding:8px 14px; border-radius:8px; display:inline-block; margin-bottom:24px; }
+  .btn{ font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; padding:12px 22px; border-radius:6px; text-decoration:none; display:inline-block; margin:0 6px; }
+  .btn-primary{ background:var(--grad); color:var(--void); font-weight:700; }
+  .btn-ghost{ border:1px solid rgba(245,243,250,0.3); color:var(--paper); }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#0A0912" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+    </div>
+    <h1>Payment received</h1>
+    <p>Your order is confirmed. We'll reach out about pickup or shipping shortly — check your account page for the latest status.</p>
+    <div class="order-id" id="orderIdDisplay">Order: &mdash;</div>
+    <div>
+      <a href="/surplus/shop/account/" class="btn btn-primary">View My Orders</a>
+      <a href="/surplus/shop/" class="btn btn-ghost">Back to Shop</a>
+    </div>
+  </div>
+
+  <script>
+    var params = new URLSearchParams(window.location.search);
+    var orderId = params.get('order');
+    if (orderId) {
+      document.getElementById('orderIdDisplay').textContent = 'Order: ' + orderId;
+    }
+  </script>
+
+</body>
+</html>

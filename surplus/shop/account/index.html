@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Orders — Holly Hill Surplus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0912; --void-2:#141126; --pink:#FF2E9A; --violet:#8A4FFF; --cyan:#2BE8DC;
+    --paper:#F5F3FA; --muted:#9A93B5; --line:rgba(245,243,250,0.1);
+    --grad: linear-gradient(90deg, var(--pink), var(--violet) 52%, var(--cyan));
+    --display:'Rajdhani', sans-serif; --body:'Work Sans', -apple-system, sans-serif; --mono:'IBM Plex Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--void); color:var(--paper); font-family:var(--body); }
+  a{ color:inherit; } a:focus-visible, button:focus-visible{ outline:3px solid var(--cyan); outline-offset:3px; }
+  .wrap{ max-width:760px; margin:0 auto; padding:0 24px; }
+
+  .topbar{ border-bottom:1px solid var(--line); }
+  .topbar-inner{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; }
+  .wordmark{ font-family:var(--display); font-weight:700; font-size:20px; text-decoration:none; }
+  .wordmark span{ color:var(--pink); }
+  .backlink{ font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none; margin-right:20px; }
+  #auth-area{ min-height:36px; }
+
+  header.hero{ padding:44px 0 26px; }
+  header.hero h1{ font-family:var(--display); font-weight:700; font-size:clamp(28px,5vw,40px); margin:0 0 8px; }
+  header.hero p{ color:var(--muted); font-size:14.5px; }
+
+  .signed-out-msg{ text-align:center; padding:60px 20px; }
+  .signed-out-msg p{ color:var(--muted); margin-bottom:20px; }
+  .btn{ font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; padding:11px 20px; border-radius:6px; border:none; text-decoration:none; display:inline-block; }
+  .btn-primary{ background:var(--grad); color:var(--void); font-weight:700; }
+
+  .order-list{ display:flex; flex-direction:column; gap:14px; padding-bottom:60px; }
+  .order-card{
+    background:linear-gradient(160deg, rgba(29,24,48,0.55), rgba(20,17,38,0.55));
+    border:1px solid var(--line); border-radius:12px; padding:18px 20px;
+    display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .order-card .name{ font-family:var(--display); font-weight:700; font-size:17px; margin-bottom:4px; }
+  .order-card .meta{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .order-card .amount{ font-family:var(--display); font-weight:700; font-size:19px; }
+  .status-pill{ font-family:var(--mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; padding:5px 12px; border-radius:20px; }
+  .status-paid{ background:rgba(43,232,220,0.12); color:var(--cyan); }
+  .status-pending{ background:rgba(255,255,255,0.08); color:var(--muted); }
+  .status-failed, .status-refunded{ background:rgba(226,74,74,0.12); color:#F5A9A9; }
+
+  .empty{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:60px 20px; border:1px dashed var(--line); border-radius:14px; }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <div style="display:flex; align-items:center;">
+        <a href="/surplus/shop/" class="backlink">&larr; Shop</a>
+        <a href="/surplus/shop/" class="wordmark">HOLLY HILL <span>Shop</span></a>
+      </div>
+      <div id="auth-area"></div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <header class="hero">
+      <h1>My Orders</h1>
+      <p>Everything you've bought from Holly Hill Surplus, in one place.</p>
+    </header>
+
+    <div id="content">
+      <div class="empty">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <script src="/surplus/shop/clerk-loader.js"></script>
+  <script>
+    var authArea = document.getElementById('auth-area');
+    var content = document.getElementById('content');
+
+    function money(cents) {
+      return '$' + (cents / 100).toFixed(2);
+    }
+    function formatDate(iso) {
+      if (!iso) return '';
+      var d = new Date(iso + 'Z');
+      return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function renderAuthArea(clerk) {
+      authArea.innerHTML = '';
+      if (clerk.user) {
+        var userDiv = document.createElement('div');
+        authArea.appendChild(userDiv);
+        clerk.mountUserButton(userDiv);
+      }
+    }
+
+    function renderSignedOut(clerk) {
+      content.innerHTML = '';
+      var box = document.createElement('div');
+      box.className = 'signed-out-msg';
+      box.innerHTML = '<p>Sign in to see your order history.</p>';
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-primary';
+      btn.textContent = 'Sign In';
+      btn.onclick = function () { clerk.openSignIn({}); };
+      box.appendChild(btn);
+      content.appendChild(box);
+    }
+
+    function renderOrders(orders) {
+      if (!orders.length) {
+        content.innerHTML = '<div class="empty">No orders yet — head to the shop to find something.</div>';
+        return;
+      }
+      var list = document.createElement('div');
+      list.className = 'order-list';
+      orders.forEach(function (o) {
+        var card = document.createElement('div');
+        card.className = 'order-card';
+        var statusClass = 'status-' + o.status;
+        card.innerHTML =
+          '<div>' +
+            '<div class="name"></div>' +
+            '<div class="meta">' + formatDate(o.created_at) + '</div>' +
+          '</div>' +
+          '<div style="display:flex; align-items:center; gap:14px;">' +
+            '<span class="amount">' + money(o.amount_cents) + '</span>' +
+            '<span class="status-pill ' + statusClass + '"></span>' +
+          '</div>';
+        card.querySelector('.name').textContent = o.lot_name;
+        card.querySelector('.status-pill').textContent = o.status;
+        list.appendChild(card);
+      });
+      content.innerHTML = '';
+      content.appendChild(list);
+    }
+
+    async function loadOrders(clerk) {
+      try {
+        var token = await clerk.session.getToken();
+        var res = await fetch('/api/orders', {
+          headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!res.ok) {
+          content.innerHTML = '<div class="empty">Couldn\'t load your orders right now.</div>';
+          return;
+        }
+        var data = await res.json();
+        renderOrders(data.orders || []);
+      } catch (err) {
+        content.innerHTML = '<div class="empty">Couldn\'t load your orders right now.</div>';
+      }
+    }
+
+    window.clerkReady.then(function (clerk) {
+      renderAuthArea(clerk);
+      clerk.addListener(function () { renderAuthArea(clerk); });
+      if (clerk.user) {
+        loadOrders(clerk);
+      } else {
+        renderSignedOut(clerk);
+      }
+    }).catch(function (err) {
+      content.innerHTML = '<div class="empty">Sign-in is temporarily unavailable.</div>';
+    });
+  </script>
+
+</body>
+</html>
