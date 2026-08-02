@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /surplus/shop/success/
+Disallow: /surplus/shop/account/
+
+Sitemap: https://hollyhillohio.com/sitemap.xml

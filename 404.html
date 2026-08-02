@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Not found — Holly Hill</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3ECDA; --ink:#2B3A2A; --ink-soft:#4A5A46; --rust:#6B4226; --honey:#C98A2C;
+    --display:'Fraunces', serif; --body:'Work Sans', -apple-system, sans-serif; --mono:'Courier Prime', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--paper); color:var(--ink); font-family:var(--body); }
+  body{ display:flex; align-items:center; justify-content:center; padding:24px; text-align:center; }
+  a{ color:inherit; }
+  a:focus-visible{ outline:3px solid var(--honey); outline-offset:3px; }
+
+  .stamp{
+    width:110px; height:110px; margin:0 auto 26px; border-radius:50%;
+    border:3px solid var(--rust); display:flex; align-items:center; justify-content:center;
+    transform:rotate(-8deg); color:var(--rust); font-family:var(--mono); font-size:12px;
+    letter-spacing:0.06em; line-height:1.4;
+  }
+  .eyebrow{ font-family:var(--mono); font-size:12px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:16px; }
+  h1{ font-family:var(--display); font-weight:600; font-size:clamp(38px,7vw,60px); margin:0 0 16px; }
+  p{ color:var(--ink-soft); font-size:16px; max-width:46ch; margin:0 auto 30px; line-height:1.6; }
+  .btn{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:0.05em; text-transform:uppercase;
+    text-decoration:none; padding:13px 24px; border-radius:2px; display:inline-block; margin:0 6px;
+  }
+  .btn-primary{ background:var(--ink); color:var(--paper); }
+  .btn-primary:hover{ background:var(--rust); }
+  .btn-ghost{ border:1.5px solid var(--ink); color:var(--ink); }
+</style>
+</head>
+<body>
+  <div>
+    <div class="stamp">SOLD<br>OUT</div>
+    <div class="eyebrow">404 &middot; Lot Not Found</div>
+    <h1>This one already sold.</h1>
+    <p>Whatever you were looking for isn't here — the link might be old, or it just never existed. Nothing wrong on your end.</p>
+    <div>
+      <a href="/" class="btn btn-primary">Back to Holly Hill</a>
+      <a href="/surplus/shop/" class="btn btn-ghost">Browse the Shop</a>
+    </div>
+  </div>
+</body>
+</html>
