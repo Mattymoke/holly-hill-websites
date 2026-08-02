@@ -8,53 +8,85 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --void:#0A0912; --void-2:#141126; --void-3:#1D1830; --line:rgba(245,243,250,0.1);
+    --void:#0A0912; --void-2:#141126; --void-3:#1D1830; --line:rgba(245,243,250,0.12);
     --pink:#FF2E9A; --violet:#8A4FFF; --cyan:#2BE8DC; --paper:#F5F3FA; --muted:#9A93B5;
     --grad: linear-gradient(90deg, var(--pink), var(--violet) 52%, var(--cyan));
     --display:'Rajdhani', sans-serif; --body:'Work Sans', -apple-system, sans-serif; --mono:'IBM Plex Mono', monospace;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; background:var(--void); color:var(--paper); font-family:var(--body); }
-  a{ color:inherit; } button{ font:inherit; cursor:pointer; }
-  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
-  a:focus-visible, button:focus-visible{ outline:3px solid var(--cyan); outline-offset:3px; }
+  a{ color:inherit; } button,select{ font:inherit; cursor:pointer; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+  a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible{ outline:3px solid var(--cyan); outline-offset:2px; }
 
-  .topbar{ border-bottom:1px solid var(--line); background:rgba(10,9,18,0.9); position:sticky; top:0; z-index:10; }
+  .topbar{ border-bottom:1px solid var(--line); background:rgba(10,9,18,0.92); position:sticky; top:0; z-index:20; }
   .topbar-inner{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; }
   .wordmark{ font-family:var(--display); font-weight:700; font-size:20px; text-decoration:none; }
   .wordmark span{ color:var(--pink); }
   .backlink{ font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none; margin-right:20px; }
   #auth-area{ display:flex; align-items:center; gap:12px; }
 
-  .btn{ font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; padding:10px 18px; border-radius:6px; border:none; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+  .btn{ font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; padding:10px 18px; border-radius:6px; border:none; text-decoration:none; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
   .btn-primary{ background:var(--grad); color:var(--void); font-weight:700; }
   .btn-ghost{ background:transparent; border:1px solid rgba(245,243,250,0.3); color:var(--paper); }
+  .btn-sm{ padding:8px 14px; font-size:11.5px; }
 
-  header.hero{ padding:50px 0 30px; }
-  header.hero h1{ font-family:var(--display); font-weight:700; font-size:clamp(32px,6vw,52px); margin:0 0 10px; }
-  header.hero p{ color:var(--muted); max-width:56ch; }
+  header.hero{ padding:34px 0 18px; }
+  header.hero h1{ font-family:var(--display); font-weight:700; font-size:clamp(28px,5vw,40px); margin:0 0 6px; }
+  header.hero p{ color:var(--muted); font-size:13.5px; max-width:64ch; }
 
-  #status-msg{ font-family:var(--mono); font-size:13px; padding:12px 16px; border-radius:8px; margin-bottom:20px; display:none; }
+  #status-msg{ font-family:var(--mono); font-size:13px; padding:12px 16px; border-radius:8px; margin:0 0 16px; display:none; }
   #status-msg.show{ display:block; }
   #status-msg.error{ background:rgba(226,74,74,0.15); color:#F5A9A9; border:1px solid rgba(226,74,74,0.3); }
-  #status-msg.info{ background:rgba(43,232,220,0.1); color:var(--cyan); border:1px solid rgba(43,232,220,0.25); }
 
-  .grid{ display:grid; gap:22px; grid-template-columns:1fr; padding-bottom:80px; }
-  @media(min-width:640px){ .grid{ grid-template-columns:repeat(2,1fr); } }
-  @media(min-width:980px){ .grid{ grid-template-columns:repeat(3,1fr); } }
+  .browse{ display:grid; grid-template-columns:1fr; gap:26px; padding-bottom:80px; }
+  @media(min-width:860px){ .browse{ grid-template-columns:220px 1fr; align-items:start; } }
 
-  .card{
-    background:linear-gradient(160deg, rgba(29,24,48,0.62), rgba(20,17,38,0.62));
-    backdrop-filter:blur(16px); border:1px solid var(--line); border-radius:14px; padding:22px;
-    display:flex; flex-direction:column; transition:border-color .2s ease, transform .2s ease;
+  .filters{
+    background:var(--void-2); border:1px solid var(--line); border-radius:12px; padding:18px;
   }
-  .card:hover{ border-color:rgba(255,46,154,0.4); transform:translateY(-4px); }
-  .card .cat{ font-family:var(--mono); font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-  .card h3{ font-family:var(--display); font-weight:700; font-size:20px; margin:0 0 8px; }
-  .card p.desc{ font-size:13.5px; color:var(--muted); margin:0 0 16px; flex:1; }
-  .card .price{ font-family:var(--display); font-weight:700; font-size:26px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:14px; }
-  .card .buy-btn{ width:100%; justify-content:center; }
-  .card .buy-btn:disabled{ opacity:0.5; cursor:not-allowed; }
+  .filters h3{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin:0 0 12px; }
+  .filter-group{ margin-bottom:20px; }
+  .filter-group:last-child{ margin-bottom:0; }
+  .filter-group h4{ font-family:var(--body); font-weight:600; font-size:13px; margin:0 0 10px; }
+  .filter-check{ display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--paper); }
+  .filter-check input{ accent-color:var(--pink); width:15px; height:15px; }
+  .price-inputs{ display:flex; align-items:center; gap:8px; }
+  .price-inputs input{
+    width:100%; background:var(--void); border:1px solid var(--line); border-radius:6px; color:var(--paper);
+    padding:8px 8px; font-family:var(--mono); font-size:12px;
+  }
+  .price-inputs span{ color:var(--muted); font-size:12px; }
+  .clear-filters{ font-family:var(--mono); font-size:11px; color:var(--cyan); background:none; border:none; text-decoration:underline; padding:0; margin-top:14px; }
+
+  .results-bar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+  .results-count{ font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+  .sort-control{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; color:var(--muted); }
+  .sort-control select{
+    background:var(--void-2); color:var(--paper); border:1px solid var(--line); border-radius:6px; padding:8px 10px;
+  }
+
+  .listing-rows{ display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .listing-row{
+    background:var(--void-2); padding:18px 20px; display:grid; grid-template-columns:56px 1fr auto; gap:16px; align-items:center;
+    transition:background .15s ease;
+  }
+  .listing-row:hover{ background:var(--void-3); }
+  @media(max-width:600px){ .listing-row{ grid-template-columns:44px 1fr; grid-template-rows:auto auto; } .listing-row .row-action{ grid-column:1 / -1; } }
+
+  .row-icon{
+    width:56px; height:56px; border-radius:10px; background:var(--grad); display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:20px; color:var(--void); flex-shrink:0;
+  }
+  @media(max-width:600px){ .row-icon{ width:44px; height:44px; font-size:16px; } }
+
+  .row-main .cat{ font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .row-main h3{ font-family:var(--display); font-weight:700; font-size:17px; margin:0 0 4px; }
+  .row-main p.desc{ font-size:12.5px; color:var(--muted); margin:0; max-width:60ch; }
+
+  .row-action{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+  .row-price{ font-family:var(--display); font-weight:700; font-size:22px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .row-ebay{ font-family:var(--mono); font-size:10.5px; color:var(--muted); text-decoration:line-through; }
 
   .empty{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:60px 20px; border:1px dashed var(--line); border-radius:14px; }
 </style>
@@ -67,9 +99,7 @@
         <a href="/surplus/" class="backlink">&larr; Surplus</a>
         <a href="/surplus/shop/" class="wordmark">HOLLY HILL <span>Shop</span></a>
       </div>
-      <div id="auth-area">
-        <!-- Clerk fills this in once loaded -->
-      </div>
+      <div id="auth-area"></div>
     </div>
   </div>
 
@@ -81,28 +111,69 @@
 
     <div id="status-msg"></div>
 
-    <div class="grid" id="lots-grid">
-      <div class="empty">Loading current lots&hellip;</div>
+    <div class="browse">
+      <aside class="filters" id="filtersPanel">
+        <h3>Filter</h3>
+        <div class="filter-group">
+          <h4>Category</h4>
+          <div id="categoryChecks"></div>
+        </div>
+        <div class="filter-group">
+          <h4>Price</h4>
+          <div class="price-inputs">
+            <input type="number" id="minPrice" placeholder="Min" min="0">
+            <span>&ndash;</span>
+            <input type="number" id="maxPrice" placeholder="Max" min="0">
+          </div>
+        </div>
+        <button class="clear-filters" id="clearFilters">Clear all filters</button>
+      </aside>
+
+      <div class="results">
+        <div class="results-bar">
+          <div class="results-count" id="resultsCount">Loading&hellip;</div>
+          <div class="sort-control">
+            <label for="sortSelect">Sort:</label>
+            <select id="sortSelect">
+              <option value="newest">Newest</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="name">Name: A to Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="listing-rows" id="listingRows">
+          <div class="empty">Loading current lots&hellip;</div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script src="/surplus/shop/clerk-loader.js"></script>
   <script>
     var authArea = document.getElementById('auth-area');
-    var lotsGrid = document.getElementById('lots-grid');
     var statusMsg = document.getElementById('status-msg');
+    var listingRows = document.getElementById('listingRows');
+    var resultsCount = document.getElementById('resultsCount');
+    var categoryChecks = document.getElementById('categoryChecks');
+    var minPriceInput = document.getElementById('minPrice');
+    var maxPriceInput = document.getElementById('maxPrice');
+    var sortSelect = document.getElementById('sortSelect');
+    var clearFiltersBtn = document.getElementById('clearFilters');
+
     var clerkInstance = null;
+    var allLots = [];
+    var selectedCategories = new Set();
 
     function showStatus(text, kind) {
       statusMsg.textContent = text;
       statusMsg.className = 'show ' + (kind || 'info');
     }
-    function hideStatus() {
-      statusMsg.className = '';
-    }
-
-    function money(cents) {
-      return '$' + (cents / 100).toFixed(2);
+    function hideStatus() { statusMsg.className = ''; }
+    function money(cents) { return '$' + (cents / 100).toFixed(2); }
+    function initials(name) {
+      var words = name.trim().split(/\s+/).slice(0, 2);
+      return words.map(function (w) { return w[0]; }).join('').toUpperCase();
     }
 
     function renderAuthArea() {
@@ -110,42 +181,91 @@
       if (clerkInstance.user) {
         var acctLink = document.createElement('a');
         acctLink.href = '/surplus/shop/account/';
-        acctLink.className = 'btn btn-ghost';
+        acctLink.className = 'btn btn-ghost btn-sm';
         acctLink.textContent = 'My Orders';
         authArea.appendChild(acctLink);
-
         var userDiv = document.createElement('div');
         authArea.appendChild(userDiv);
         clerkInstance.mountUserButton(userDiv);
       } else {
         var signInBtn = document.createElement('button');
-        signInBtn.className = 'btn btn-primary';
+        signInBtn.className = 'btn btn-primary btn-sm';
         signInBtn.textContent = 'Sign In';
         signInBtn.onclick = function () { clerkInstance.openSignIn({}); };
         authArea.appendChild(signInBtn);
       }
     }
 
-    function renderLots(lots) {
+    function buildCategoryFilters() {
+      var cats = Array.from(new Set(allLots.map(function (l) { return l.category || 'Surplus'; }))).sort();
+      categoryChecks.innerHTML = '';
+      cats.forEach(function (cat) {
+        var label = document.createElement('label');
+        label.className = 'filter-check';
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = cat;
+        input.addEventListener('change', function () {
+          if (input.checked) { selectedCategories.add(cat); } else { selectedCategories.delete(cat); }
+          renderResults();
+        });
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(cat));
+        categoryChecks.appendChild(label);
+      });
+    }
+
+    function getFilteredSortedLots() {
+      var min = parseFloat(minPriceInput.value);
+      var max = parseFloat(maxPriceInput.value);
+      var filtered = allLots.filter(function (lot) {
+        var cat = lot.category || 'Surplus';
+        if (selectedCategories.size > 0 && !selectedCategories.has(cat)) return false;
+        var price = lot.website_price_cents / 100;
+        if (!isNaN(min) && price < min) return false;
+        if (!isNaN(max) && price > max) return false;
+        return true;
+      });
+      var sortVal = sortSelect.value;
+      filtered.sort(function (a, b) {
+        if (sortVal === 'price-low') return a.website_price_cents - b.website_price_cents;
+        if (sortVal === 'price-high') return b.website_price_cents - a.website_price_cents;
+        if (sortVal === 'name') return a.name.localeCompare(b.name);
+        return 0;
+      });
+      return filtered;
+    }
+
+    function renderResults() {
+      var lots = getFilteredSortedLots();
+      resultsCount.textContent = lots.length + ' result' + (lots.length === 1 ? '' : 's');
+
       if (!lots.length) {
-        lotsGrid.innerHTML = '<div class="empty">No lots available right now — check back soon.</div>';
+        listingRows.innerHTML = '<div class="empty">No lots match your filters — try clearing them.</div>';
         return;
       }
-      lotsGrid.innerHTML = '';
+      listingRows.innerHTML = '';
       lots.forEach(function (lot) {
-        var card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML =
-          '<div class="cat">' + (lot.category || 'Surplus') + '</div>' +
-          '<h3></h3>' +
-          '<p class="desc"></p>' +
-          '<div class="price">' + money(lot.website_price_cents) + '</div>' +
-          '<button class="btn btn-primary buy-btn">Buy Now</button>';
-        card.querySelector('h3').textContent = lot.name;
-        card.querySelector('.desc').textContent = lot.description || '';
-        var buyBtn = card.querySelector('.buy-btn');
+        var row = document.createElement('div');
+        row.className = 'listing-row';
+        row.innerHTML =
+          '<div class="row-icon"></div>' +
+          '<div class="row-main">' +
+            '<div class="cat"></div>' +
+            '<h3></h3>' +
+            '<p class="desc"></p>' +
+          '</div>' +
+          '<div class="row-action">' +
+            '<div class="row-price">' + money(lot.website_price_cents) + '</div>' +
+            '<button class="btn btn-primary btn-sm buy-btn">Buy Now</button>' +
+          '</div>';
+        row.querySelector('.row-icon').textContent = initials(lot.name);
+        row.querySelector('.cat').textContent = lot.category || 'Surplus';
+        row.querySelector('h3').textContent = lot.name;
+        row.querySelector('.desc').textContent = lot.description || '';
+        var buyBtn = row.querySelector('.buy-btn');
         buyBtn.addEventListener('click', function () { handleBuy(lot.id, buyBtn); });
-        lotsGrid.appendChild(card);
+        listingRows.appendChild(row);
       });
     }
 
@@ -153,9 +273,12 @@
       try {
         var res = await fetch('/api/lots');
         var data = await res.json();
-        renderLots(data.lots || []);
+        allLots = data.lots || [];
+        buildCategoryFilters();
+        renderResults();
       } catch (err) {
-        lotsGrid.innerHTML = '<div class="empty">Couldn\'t load lots right now. Try refreshing.</div>';
+        listingRows.innerHTML = '<div class="empty">Couldn\'t load lots right now. Try refreshing.</div>';
+        resultsCount.textContent = '';
       }
     }
 
@@ -166,15 +289,12 @@
         return;
       }
       buttonEl.disabled = true;
-      buttonEl.textContent = 'Starting checkout...';
+      buttonEl.textContent = 'Starting...';
       try {
         var token = await clerkInstance.session.getToken();
         var res = await fetch('/api/checkout', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token,
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ lotId: lotId }),
         });
         var data = await res.json();
@@ -182,7 +302,7 @@
           showStatus(data.error || 'Something went wrong starting checkout.', 'error');
           buttonEl.disabled = false;
           buttonEl.textContent = 'Buy Now';
-          if (res.status === 409) loadLots(); // lot no longer available, refresh the list
+          if (res.status === 409) loadLots();
           return;
         }
         window.location.href = data.checkoutUrl;
@@ -192,6 +312,17 @@
         buttonEl.textContent = 'Buy Now';
       }
     }
+
+    sortSelect.addEventListener('change', renderResults);
+    minPriceInput.addEventListener('input', renderResults);
+    maxPriceInput.addEventListener('input', renderResults);
+    clearFiltersBtn.addEventListener('click', function () {
+      selectedCategories.clear();
+      minPriceInput.value = '';
+      maxPriceInput.value = '';
+      categoryChecks.querySelectorAll('input').forEach(function (i) { i.checked = false; });
+      renderResults();
+    });
 
     window.clerkReady.then(function (clerk) {
       clerkInstance = clerk;
