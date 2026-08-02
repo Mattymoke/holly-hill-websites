@@ -147,14 +147,17 @@ async function verifyStripeSignature(request, env, rawBody) {
 async function handleStripeWebhook(request, env) {
   const rawBody = await request.text();
   const valid = await verifyStripeSignature(request, env, rawBody);
+  console.log("Webhook signature valid:", valid);
   if (!valid) return json({ error: "Invalid signature" }, 400);
 
   const event = JSON.parse(rawBody);
+  console.log("Webhook event type:", event.type);
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const orderId = session.metadata.order_id;
     const lotId = session.metadata.lot_id;
+    console.log("Updating order:", orderId, "lot:", lotId);
 
     await env.DB.batch([
       env.DB.prepare(
@@ -164,6 +167,7 @@ async function handleStripeWebhook(request, env) {
         "UPDATE lots SET status = 'sold', updated_at = datetime('now') WHERE id = ?"
       ).bind(lotId),
     ]);
+    console.log("Order update complete");
   }
 
   return json({ received: true });
