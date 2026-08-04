@@ -1,19 +1,23 @@
 // Holly Hill Surplus — shop backend (Cloudflare Worker)
 //
-// Routes:
+// Public routes:
 //   GET  /api/lots              -> list available lots (public)
 //   POST /api/checkout          -> create a Stripe Checkout session (requires login)
 //   POST /api/webhook/stripe    -> Stripe calls this when payment completes
 //   GET  /api/orders            -> order history for the logged-in buyer
 //
-// Anything that isn't one of these paths falls through to the static
-// site (index.html, /mushrooms, /surplus) automatically -- that's what
-// the "assets" config in wrangler.jsonc does, no code needed here for it.
+// Admin-only routes (require the signed-in user to match ADMIN_USER_ID):
+//   GET  /api/admin/lots         -> list ALL lots, any status
+//   POST /api/admin/lots/create  -> create a new lot
+//   POST /api/admin/lots/update  -> update an existing lot (price, status, etc.)
+//   POST /api/admin/lots/delete  -> delete a lot
+//   GET  /api/admin/orders       -> list all orders, across all buyers
 //
-// Requires these secrets to be set (see the setup notes at the bottom):
+// Requires these secrets:
 //   wrangler secret put STRIPE_SECRET_KEY
 //   wrangler secret put STRIPE_WEBHOOK_SECRET
 //   wrangler secret put CLERK_SECRET_KEY
+//   wrangler secret put ADMIN_USER_ID
 
 import { verifyToken } from "@clerk/backend";
 
@@ -37,6 +41,17 @@ async function getAuthedUserId(request, env) {
     console.error("Clerk token verification failed:", err.message);
     return null;
   }
+}
+
+async function getAdminUserId(request, env) {
+  const userId = await getAuthedUserId(request, env);
+  if (!userId) return null;
+  if (!env.ADMIN_USER_ID) {
+    console.error("ADMIN_USER_ID is not configured -- refusing all admin requests");
+    return null;
+  }
+  if (userId !== env.ADMIN_USER_ID) return null;
+  return userId;
 }
 
 async function handleListLots(env) {
@@ -63,8 +78,6 @@ async function handleCheckout(request, env) {
     return json({ error: "That lot is no longer available" }, 409);
   }
 
-  // Mark it "reserved" immediately so a second buyer can't also check out
-  // while this buyer is on the Stripe payment page.
   await env.DB.prepare("UPDATE lots SET status = 'reserved', updated_at = datetime('now') WHERE id = ?")
     .bind(lotId)
     .run();
@@ -94,7 +107,6 @@ async function handleCheckout(request, env) {
   });
 
   if (!stripeRes.ok) {
-    // Release the reservation if Stripe failed to create the session
     await env.DB.prepare("UPDATE lots SET status = 'available', updated_at = datetime('now') WHERE id = ?")
       .bind(lotId)
       .run();
@@ -189,6 +201,97 @@ async function handleOrders(request, env) {
   return json({ orders: results });
 }
 
+async function handleAdminListLots(request, env) {
+  const adminId = await getAdminUserId(request, env);
+  if (!adminId) return json({ error: "Not authorized" }, 403);
+
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM lots ORDER BY created_at DESC"
+  ).all();
+  return json({ lots: results });
+}
+
+async function handleAdminCreateLot(request, env) {
+  const adminId = await getAdminUserId(request, env);
+  if (!adminId) return json({ error: "Not authorized" }, 403);
+
+  const body = await request.json();
+  const { id, name, category, description, website_price_cents } = body;
+
+  if (!id || !name || !website_price_cents) {
+    return json({ error: "id, name, and website_price_cents are required" }, 400);
+  }
+
+  try {
+    await env.DB.prepare(
+      `INSERT INTO lots (id, name, category, description, website_price_cents, status)
+       VALUES (?, ?, ?, ?, ?, 'available')`
+    )
+      .bind(id, name, category || null, description || null, website_price_cents)
+      .run();
+  } catch (err) {
+    return json({ error: "Could not create lot — that Lot # might already exist" }, 409);
+  }
+
+  return json({ success: true });
+}
+
+async function handleAdminUpdateLot(request, env) {
+  const adminId = await getAdminUserId(request, env);
+  if (!adminId) return json({ error: "Not authorized" }, 403);
+
+  const body = await request.json();
+  const { id, name, category, description, website_price_cents, status } = body;
+  if (!id) return json({ error: "id is required" }, 400);
+
+  await env.DB.prepare(
+    `UPDATE lots SET
+       name = COALESCE(?, name),
+       category = COALESCE(?, category),
+       description = COALESCE(?, description),
+       website_price_cents = COALESCE(?, website_price_cents),
+       status = COALESCE(?, status),
+       updated_at = datetime('now')
+     WHERE id = ?`
+  )
+    .bind(
+      name ?? null,
+      category ?? null,
+      description ?? null,
+      website_price_cents ?? null,
+      status ?? null,
+      id
+    )
+    .run();
+
+  return json({ success: true });
+}
+
+async function handleAdminDeleteLot(request, env) {
+  const adminId = await getAdminUserId(request, env);
+  if (!adminId) return json({ error: "Not authorized" }, 403);
+
+  const body = await request.json();
+  const { id } = body;
+  if (!id) return json({ error: "id is required" }, 400);
+
+  await env.DB.prepare("DELETE FROM lots WHERE id = ?").bind(id).run();
+  return json({ success: true });
+}
+
+async function handleAdminListOrders(request, env) {
+  const adminId = await getAdminUserId(request, env);
+  if (!adminId) return json({ error: "Not authorized" }, 403);
+
+  const { results } = await env.DB.prepare(
+    `SELECT o.id, o.clerk_user_id, o.amount_cents, o.status, o.created_at, o.paid_at, l.name AS lot_name
+     FROM orders o JOIN lots l ON l.id = o.lot_id
+     ORDER BY o.created_at DESC LIMIT 100`
+  ).all();
+
+  return json({ orders: results });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -206,34 +309,22 @@ export default {
       return handleOrders(request, env);
     }
 
-    // Anything else: let the static assets binding handle it
+    if (url.pathname === "/api/admin/lots" && request.method === "GET") {
+      return handleAdminListLots(request, env);
+    }
+    if (url.pathname === "/api/admin/lots/create" && request.method === "POST") {
+      return handleAdminCreateLot(request, env);
+    }
+    if (url.pathname === "/api/admin/lots/update" && request.method === "POST") {
+      return handleAdminUpdateLot(request, env);
+    }
+    if (url.pathname === "/api/admin/lots/delete" && request.method === "POST") {
+      return handleAdminDeleteLot(request, env);
+    }
+    if (url.pathname === "/api/admin/orders" && request.method === "GET") {
+      return handleAdminListOrders(request, env);
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
-
-// -----------------------------------------------------------------------
-// One-time setup, in order:
-//
-// 1. Create the D1 database:
-//      npx wrangler d1 create holly-hill-shop
-//    Copy the database_id it prints into wrangler.jsonc (see updated file).
-//
-// 2. Load the schema:
-//      npx wrangler d1 execute holly-hill-shop --file=schema.sql --remote
-//
-// 3. Install dependencies (this repo now needs a real build step):
-//      npm install @clerk/backend
-//
-// 4. Set your secrets (never commit these to GitHub):
-//      npx wrangler secret put STRIPE_SECRET_KEY
-//      npx wrangler secret put STRIPE_WEBHOOK_SECRET
-//      npx wrangler secret put CLERK_SECRET_KEY
-//
-// 5. In Cloudflare Pages build settings, set the Build command to:
-//      npm install
-//    (it was blank before -- now there's a real dependency to install)
-//
-// 6. In Stripe's dashboard, add a webhook endpoint pointing to:
-//      https://hollyhillohio.com/api/webhook/stripe
-//    listening for the "checkout.session.completed" event.
-// -----------------------------------------------------------------------
