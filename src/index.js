@@ -5,6 +5,7 @@
 //   POST /api/checkout          -> create a Stripe Checkout session (requires login)
 //   POST /api/webhook/stripe    -> Stripe calls this when payment completes
 //   GET  /api/orders            -> order history for the logged-in buyer
+//   POST /api/contact           -> contact form submission, sent via Resend
 //   GET  /media/:key            -> serves an uploaded lot photo from R2
 //
 // Admin-only routes (require the signed-in user to match ADMIN_USER_ID):
@@ -24,6 +25,8 @@
 //   wrangler secret put CLERK_SECRET_KEY
 //   wrangler secret put ADMIN_USER_ID
 //   wrangler secret put SYNC_API_KEY
+//   wrangler secret put RESEND_API_KEY
+//   wrangler secret put TURNSTILE_SECRET_KEY
 
 import { verifyToken } from "@clerk/backend";
 
@@ -230,6 +233,102 @@ async function handleOrders(request, env) {
   return json({ orders: results });
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function verifyTurnstile(token, env) {
+  const params = new URLSearchParams({
+    secret: env.TURNSTILE_SECRET_KEY,
+    response: token,
+  });
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  const data = await res.json();
+  return data.success === true;
+}
+
+async function handleContact(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch (err) {
+    return json({ error: "Invalid request body" }, 400);
+  }
+
+  const { name, email, message, turnstileToken, honeypot } = body || {};
+
+  // A bot filled in a field real users never see -- silently pretend to
+  // succeed rather than tip it off that it was caught.
+  if (honeypot) {
+    return json({ success: true });
+  }
+
+  if (!turnstileToken) {
+    return json({ error: "Please complete the verification check." }, 400);
+  }
+  const turnstileOk = await verifyTurnstile(turnstileToken, env);
+  if (!turnstileOk) {
+    return json({ error: "Verification check failed. Please try again." }, 400);
+  }
+
+  const trimmedName = (name || "").toString().trim();
+  const trimmedEmail = (email || "").toString().trim();
+  const trimmedMessage = (message || "").toString().trim();
+
+  const fieldErrors = {};
+  if (!trimmedName) fieldErrors.name = "Name is required.";
+  if (!EMAIL_REGEX.test(trimmedEmail)) fieldErrors.email = "Please enter a valid email address.";
+  if (!trimmedMessage) {
+    fieldErrors.message = "Message is required.";
+  } else if (trimmedMessage.length > 3000) {
+    fieldErrors.message = "Message must be under 3000 characters.";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return json({ error: "Please fix the errors below.", fields: fieldErrors }, 400);
+  }
+
+  const html =
+    `<p><strong>Name:</strong> ${escapeHtml(trimmedName)}</p>` +
+    `<p><strong>Email:</strong> ${escapeHtml(trimmedEmail)}</p>` +
+    `<p><strong>Message:</strong></p>` +
+    `<p>${escapeHtml(trimmedMessage).replace(/\n/g, "<br>")}</p>`;
+
+  const resendRes = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + env.RESEND_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Holly Hill Contact Form <contact@hollyhillohio.com>",
+      to: "surplus@hollyhillohio.com",
+      reply_to: trimmedEmail,
+      subject: "New contact form message from " + trimmedName,
+      html,
+    }),
+  });
+
+  if (!resendRes.ok) {
+    const errText = await resendRes.text();
+    console.error("Resend send failed:", resendRes.status, errText);
+    return json({ error: "Could not send your message right now. Please try again later." }, 502);
+  }
+
+  return json({ success: true });
+}
+
 async function handleAdminListLots(request, env) {
   const adminId = await getAdminUserId(request, env);
   if (!adminId) return json({ error: "Not authorized" }, 403);
@@ -413,6 +512,9 @@ export default {
     }
     if (url.pathname === "/api/orders" && request.method === "GET") {
       return handleOrders(request, env);
+    }
+    if (url.pathname === "/api/contact" && request.method === "POST") {
+      return handleContact(request, env);
     }
     if (url.pathname.startsWith("/media/") && request.method === "GET") {
       const key = decodeURIComponent(url.pathname.slice("/media/".length));
