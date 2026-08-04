@@ -3,6 +3,7 @@
 // Public routes:
 //   GET  /api/lots              -> list available lots (public)
 //   GET  /api/lots/sold         -> recently sold lots, for the "Recently Sold" trust section (public)
+//   GET  /api/lots/:id          -> single lot detail, any status (public)
 //   POST /api/checkout          -> create a Stripe Checkout session (requires login)
 //   POST /api/webhook/stripe    -> Stripe calls this when payment completes
 //   GET  /api/orders            -> order history for the logged-in buyer
@@ -99,6 +100,18 @@ async function handleListSoldLots(env) {
     "SELECT id, name, category, website_price_cents, image_urls, updated_at FROM lots WHERE status = 'sold' ORDER BY updated_at DESC LIMIT 8"
   ).all();
   return json({ lots: results });
+}
+
+async function handleLotDetail(env, id) {
+  const lot = await env.DB.prepare(
+    "SELECT id, name, category, description, website_price_cents, status, image_urls FROM lots WHERE id = ?"
+  )
+    .bind(id)
+    .first();
+
+  if (!lot) return json({ error: "Lot not found" }, 404);
+
+  return json({ lot });
 }
 
 async function handleCheckout(request, env) {
@@ -514,6 +527,10 @@ export default {
     }
     if (url.pathname === "/api/lots/sold" && request.method === "GET") {
       return handleListSoldLots(env);
+    }
+    if (url.pathname.startsWith("/api/lots/") && request.method === "GET") {
+      const id = decodeURIComponent(url.pathname.slice("/api/lots/".length));
+      return handleLotDetail(env, id);
     }
     if (url.pathname === "/api/checkout" && request.method === "POST") {
       return handleCheckout(request, env);

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lot — Holly Hill Surplus</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0912; --void-2:#141126; --void-3:#1D1830; --line:rgba(245,243,250,0.12);
+    --pink:#FF2E9A; --violet:#8A4FFF; --cyan:#2BE8DC; --paper:#F5F3FA; --muted:#9A93B5;
+    --grad: linear-gradient(90deg, var(--pink), var(--violet) 52%, var(--cyan));
+    --display:'Rajdhani', sans-serif; --body:'Work Sans', -apple-system, sans-serif; --mono:'IBM Plex Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--void); color:var(--paper); font-family:var(--body); }
+  a{ color:inherit; } button{ font:inherit; cursor:pointer; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+  a:focus-visible, button:focus-visible{ outline:3px solid var(--cyan); outline-offset:2px; }
+
+  .topbar{ border-bottom:1px solid var(--line); background:rgba(10,9,18,0.92); position:sticky; top:0; z-index:20; }
+  .topbar-inner{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; }
+  .wordmark{ font-family:var(--display); font-weight:700; font-size:20px; text-decoration:none; }
+  .wordmark span{ color:var(--pink); }
+  .backlink{ font-family:var(--mono); font-size:12px; color:var(--muted); text-decoration:none; margin-right:20px; }
+  #auth-area{ display:flex; align-items:center; gap:12px; }
+
+  .btn{ font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; padding:12px 22px; border-radius:6px; border:none; text-decoration:none; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }
+  .btn-primary{ background:var(--grad); color:var(--void); font-weight:700; }
+  .btn-ghost{ background:transparent; border:1px solid rgba(245,243,250,0.3); color:var(--paper); }
+  .btn-sm{ padding:8px 14px; font-size:11.5px; }
+  .btn:disabled{ opacity:0.6; cursor:not-allowed; }
+
+  #status-msg{ font-family:var(--mono); font-size:13px; padding:12px 16px; border-radius:8px; margin:0 0 16px; display:none; }
+  #status-msg.show{ display:block; }
+  #status-msg.error{ background:rgba(226,74,74,0.15); color:#F5A9A9; border:1px solid rgba(226,74,74,0.3); }
+
+  .page{ padding:32px 0 90px; }
+  .backrow{ margin-bottom:22px; }
+  .backrow a{ font-family:var(--mono); font-size:12.5px; color:var(--muted); text-decoration:none; }
+  .backrow a:hover{ color:var(--cyan); }
+
+  .loading, .not-found{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:110px 20px; }
+  .not-found h2{ font-family:var(--display); color:var(--paper); font-size:26px; margin:0 0 10px; font-weight:700; }
+  .not-found p{ margin:0 0 26px; }
+
+  .lot-grid{ display:grid; gap:44px; grid-template-columns:1fr; }
+  @media(min-width:860px){ .lot-grid{ grid-template-columns:1fr 1fr; align-items:start; } }
+
+  .gallery-main{
+    width:100%; aspect-ratio:1; border-radius:14px; overflow:hidden; background:var(--void-2);
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .gallery-main img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .gallery-main .placeholder{ font-family:var(--display); font-weight:700; font-size:48px; color:var(--muted); }
+  .gallery-main.sold img{ filter:grayscale(1) brightness(0.6); }
+  .gallery-ribbon{
+    position:absolute; z-index:2; top:18px; right:-38px; width:150px; text-align:center;
+    transform:rotate(40deg); background:var(--grad); color:var(--void);
+    font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    padding:5px 0; box-shadow:0 2px 8px rgba(0,0,0,0.35);
+  }
+  .thumb-row{ display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+  .thumb{
+    width:64px; height:64px; border-radius:8px; overflow:hidden; border:2px solid transparent; background:var(--void-2);
+    cursor:pointer; padding:0;
+  }
+  .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .thumb.active{ border-color:var(--cyan); }
+
+  .lot-info .cat{ font-family:var(--mono); font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+  .lot-info h1{ font-family:var(--display); font-weight:700; font-size:clamp(26px,4vw,38px); margin:0 0 16px; }
+  .lot-info .desc{ color:var(--muted); font-size:15px; line-height:1.7; margin:0 0 26px; white-space:pre-wrap; }
+  .lot-info .price{ font-family:var(--display); font-weight:700; font-size:32px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; margin-bottom:22px; }
+
+  .status-badge{
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; letter-spacing:0.05em;
+    text-transform:uppercase; padding:12px 18px; border-radius:8px;
+  }
+  .status-badge.sold{ background:rgba(255,46,154,0.1); border:1px solid rgba(255,46,154,0.3); color:var(--pink); }
+  .status-badge.reserved{ background:rgba(201,138,44,0.12); border:1px solid rgba(201,138,44,0.3); color:#E0B86B; }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="wrap topbar-inner">
+      <div style="display:flex; align-items:center;">
+        <a href="/surplus/shop/" class="backlink">&larr; Shop</a>
+        <a href="/surplus/shop/" class="wordmark">HOLLY HILL <span>Shop</span></a>
+      </div>
+      <div id="auth-area"></div>
+    </div>
+  </div>
+
+  <div class="wrap page">
+    <div id="status-msg"></div>
+
+    <div id="loadingState" class="loading">Loading&hellip;</div>
+
+    <div id="notFoundState" class="not-found" style="display:none;">
+      <h2>Lot not found</h2>
+      <p>This listing doesn't exist, or the link's out of date.</p>
+      <a href="/surplus/shop/" class="btn btn-primary">Back to Shop</a>
+    </div>
+
+    <div id="lotContent" style="display:none;">
+      <div class="backrow"><a href="/surplus/shop/">&larr; Back to Shop</a></div>
+      <div class="lot-grid">
+        <div>
+          <div class="gallery-main" id="galleryMain"></div>
+          <div class="thumb-row" id="thumbRow"></div>
+        </div>
+        <div class="lot-info">
+          <div class="cat" id="lotCat"></div>
+          <h1 id="lotName"></h1>
+          <p class="desc" id="lotDesc"></p>
+          <div class="price" id="lotPrice"></div>
+          <div id="actionArea"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/surplus/shop/clerk-loader.js"></script>
+  <script>
+    var authArea = document.getElementById('auth-area');
+    var statusMsg = document.getElementById('status-msg');
+    var loadingState = document.getElementById('loadingState');
+    var notFoundState = document.getElementById('notFoundState');
+    var lotContent = document.getElementById('lotContent');
+    var galleryMain = document.getElementById('galleryMain');
+    var thumbRow = document.getElementById('thumbRow');
+    var lotCat = document.getElementById('lotCat');
+    var lotName = document.getElementById('lotName');
+    var lotDesc = document.getElementById('lotDesc');
+    var lotPrice = document.getElementById('lotPrice');
+    var actionArea = document.getElementById('actionArea');
+
+    var clerkInstance = null;
+    var currentLot = null;
+
+    function showStatus(text, kind) {
+      statusMsg.textContent = text;
+      statusMsg.className = 'show ' + (kind || 'info');
+    }
+    function hideStatus() { statusMsg.className = ''; }
+    function money(cents) { return '$' + (cents / 100).toFixed(2); }
+    function initials(name) {
+      var words = name.trim().split(/\s+/).slice(0, 2);
+      return words.map(function (w) { return w[0]; }).join('').toUpperCase();
+    }
+    function parseImageUrls(lot) {
+      if (!lot.image_urls) return [];
+      try {
+        var parsed = JSON.parse(lot.image_urls);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function renderAuthArea() {
+      authArea.innerHTML = '';
+      if (clerkInstance.user) {
+        var acctLink = document.createElement('a');
+        acctLink.href = '/surplus/shop/account/';
+        acctLink.className = 'btn btn-ghost btn-sm';
+        acctLink.textContent = 'My Orders';
+        authArea.appendChild(acctLink);
+        var userDiv = document.createElement('div');
+        authArea.appendChild(userDiv);
+        clerkInstance.mountUserButton(userDiv);
+      } else {
+        var signInBtn = document.createElement('button');
+        signInBtn.className = 'btn btn-primary btn-sm';
+        signInBtn.textContent = 'Sign In';
+        signInBtn.onclick = function () { clerkInstance.openSignIn({}); };
+        authArea.appendChild(signInBtn);
+      }
+    }
+
+    function setMainImage(url, isSold) {
+      galleryMain.innerHTML = '';
+      galleryMain.classList.toggle('sold', !!isSold);
+      if (isSold) {
+        var ribbon = document.createElement('div');
+        ribbon.className = 'gallery-ribbon';
+        ribbon.textContent = 'Sold';
+        galleryMain.appendChild(ribbon);
+      }
+      if (url) {
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        galleryMain.appendChild(img);
+      } else {
+        var placeholder = document.createElement('div');
+        placeholder.className = 'placeholder';
+        placeholder.textContent = initials(currentLot.name);
+        galleryMain.appendChild(placeholder);
+      }
+    }
+
+    function renderGallery(lot) {
+      var imageUrls = parseImageUrls(lot);
+      var isSold = lot.status === 'sold';
+      setMainImage(imageUrls[0] || null, isSold);
+
+      thumbRow.innerHTML = '';
+      if (imageUrls.length > 1) {
+        imageUrls.forEach(function (url, i) {
+          var thumbBtn = document.createElement('button');
+          thumbBtn.type = 'button';
+          thumbBtn.className = 'thumb' + (i === 0 ? ' active' : '');
+          var thumbImg = document.createElement('img');
+          thumbImg.src = url;
+          thumbImg.alt = '';
+          thumbBtn.appendChild(thumbImg);
+          thumbBtn.addEventListener('click', function () {
+            thumbRow.querySelectorAll('.thumb').forEach(function (t) { t.classList.remove('active'); });
+            thumbBtn.classList.add('active');
+            setMainImage(url, isSold);
+          });
+          thumbRow.appendChild(thumbBtn);
+        });
+      }
+    }
+
+    function renderAction(lot) {
+      actionArea.innerHTML = '';
+      if (lot.status === 'available') {
+        var buyBtn = document.createElement('button');
+        buyBtn.className = 'btn btn-primary buy-btn';
+        buyBtn.textContent = 'Buy Now';
+        buyBtn.addEventListener('click', function () { handleBuy(lot.id, buyBtn); });
+        actionArea.appendChild(buyBtn);
+      } else {
+        var badge = document.createElement('div');
+        badge.className = 'status-badge ' + lot.status;
+        badge.textContent = lot.status === 'sold' ? 'Sold' : 'Reserved — sale pending';
+        actionArea.appendChild(badge);
+      }
+    }
+
+    function renderLot(lot) {
+      currentLot = lot;
+      lotCat.textContent = lot.category || 'Surplus';
+      lotName.textContent = lot.name;
+      lotDesc.textContent = lot.description || '';
+      lotPrice.textContent = money(lot.website_price_cents);
+      renderGallery(lot);
+      renderAction(lot);
+
+      loadingState.style.display = 'none';
+      notFoundState.style.display = 'none';
+      lotContent.style.display = 'block';
+    }
+
+    async function loadLot() {
+      var params = new URLSearchParams(window.location.search);
+      var lotId = params.get('id');
+      if (!lotId) {
+        loadingState.style.display = 'none';
+        notFoundState.style.display = 'block';
+        return;
+      }
+      try {
+        var res = await fetch('/api/lots/' + encodeURIComponent(lotId));
+        if (res.status === 404) {
+          loadingState.style.display = 'none';
+          notFoundState.style.display = 'block';
+          return;
+        }
+        if (!res.ok) throw new Error();
+        var data = await res.json();
+        renderLot(data.lot);
+      } catch (err) {
+        loadingState.style.display = 'none';
+        notFoundState.style.display = 'block';
+      }
+    }
+
+    async function handleBuy(lotId, buttonEl) {
+      hideStatus();
+      if (!clerkInstance.user) {
+        clerkInstance.openSignIn({});
+        return;
+      }
+      buttonEl.disabled = true;
+      buttonEl.textContent = 'Starting...';
+      try {
+        var token = await clerkInstance.session.getToken();
+        var res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ lotId: lotId }),
+        });
+        var data = await res.json();
+        if (!res.ok) {
+          showStatus(data.error || 'Something went wrong starting checkout.', 'error');
+          buttonEl.disabled = false;
+          buttonEl.textContent = 'Buy Now';
+          if (res.status === 409) loadLot();
+          return;
+        }
+        window.location.href = data.checkoutUrl;
+      } catch (err) {
+        showStatus('Something went wrong. Please try again.', 'error');
+        buttonEl.disabled = false;
+        buttonEl.textContent = 'Buy Now';
+      }
+    }
+
+    window.clerkReady.then(function (clerk) {
+      clerkInstance = clerk;
+      renderAuthArea();
+      clerk.addListener(function () { renderAuthArea(); });
+    }).catch(function (err) {
+      showStatus('Sign-in is temporarily unavailable: ' + err.message, 'error');
+    });
+
+    loadLot();
+  </script>
+
+</body>
+</html>
