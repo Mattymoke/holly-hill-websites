@@ -6,3 +6,4 @@ excel-sync/lots.xlsm
 excel-sync/~$*
 node_modules/
 .wrangler/
+.claude/

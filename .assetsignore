@@ -2,3 +2,11 @@
 node_modules
 .git
 excel-sync
+.claude
+.gitignore
+.assetsignore
+package.json
+package-lock.json
+schema.sql
+src
+wrangler.jsonc
