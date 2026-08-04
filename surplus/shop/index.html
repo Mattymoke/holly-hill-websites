@@ -78,27 +78,34 @@
 
   .listing-rows{ display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
   .listing-row{
-    background:var(--void-2); padding:18px 20px; display:grid; grid-template-columns:56px 1fr auto; gap:16px; align-items:center;
+    background:var(--void-2); padding:18px 20px; display:grid; grid-template-columns:120px 1fr auto; gap:18px; align-items:center;
     transition:background .15s ease; cursor:pointer;
   }
   .listing-row:hover{ background:var(--void-3); }
-  @media(max-width:600px){ .listing-row{ grid-template-columns:44px 1fr; grid-template-rows:auto auto; } .listing-row .row-action{ grid-column:1 / -1; } }
+  @media(max-width:600px){ .listing-row{ grid-template-columns:90px 1fr; grid-template-rows:auto auto; } .listing-row .row-action{ grid-column:1 / -1; } }
 
   .row-icon{
-    width:56px; height:56px; border-radius:10px; background:var(--grad); display:flex; align-items:center; justify-content:center;
-    font-family:var(--display); font-weight:700; font-size:20px; color:var(--void); flex-shrink:0; overflow:hidden;
+    width:120px; height:120px; border-radius:12px; background:var(--grad); display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:34px; color:var(--void); flex-shrink:0; overflow:hidden; position:relative;
   }
   .row-icon.has-image{ background:var(--void-3); }
   .row-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
-  @media(max-width:600px){ .row-icon{ width:44px; height:44px; font-size:16px; } }
+  @media(max-width:600px){ .row-icon{ width:90px; height:90px; font-size:26px; } }
 
-  .row-main .cat{ font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
-  .row-main h3{ font-family:var(--display); font-weight:700; font-size:17px; margin:0 0 4px; }
-  .row-main p.desc{ font-size:12.5px; color:var(--muted); margin:0; max-width:60ch; }
+  .photo-dots{ position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:4px; z-index:2; }
+  .photo-dots span{ width:5px; height:5px; border-radius:50%; background:rgba(245,243,250,0.9); box-shadow:0 0 0 1px rgba(10,9,18,0.5); }
 
-  .row-action{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
-  .row-price{ font-family:var(--display); font-weight:700; font-size:22px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .row-ebay{ font-family:var(--mono); font-size:10.5px; color:var(--muted); text-decoration:line-through; }
+  .row-main h3{ font-family:var(--display); font-weight:700; font-size:19px; margin:0 0 6px; }
+  .row-main .meta{ font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:0.02em; }
+  .row-main .meta .sep{ margin:0 6px; color:var(--muted); opacity:0.6; }
+  .row-main .snippet{
+    font-size:11px; color:var(--muted); opacity:0.7; margin:4px 0 0; max-width:60ch;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  .row-action{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  .row-price{ font-family:var(--display); font-weight:700; font-size:24px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .buy-it-now-label{ font-family:var(--mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
 
   .empty{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:60px 20px; border:1px dashed var(--line); border-radius:14px; }
 
@@ -319,12 +326,13 @@
         row.innerHTML =
           '<div class="row-icon"></div>' +
           '<div class="row-main">' +
-            '<div class="cat"></div>' +
             '<h3></h3>' +
-            '<p class="desc"></p>' +
+            '<div class="meta"><span class="meta-cat"></span><span class="sep">&middot;</span><span>New Lexington, Ohio</span></div>' +
+            '<p class="snippet"></p>' +
           '</div>' +
           '<div class="row-action">' +
             '<div class="row-price">' + money(lot.website_price_cents) + '</div>' +
+            '<div class="buy-it-now-label">Buy It Now</div>' +
             '<button class="btn btn-primary btn-sm buy-btn">Buy Now</button>' +
           '</div>';
         var iconEl = row.querySelector('.row-icon');
@@ -335,12 +343,25 @@
           thumbImg.src = imageUrls[0];
           thumbImg.alt = '';
           iconEl.appendChild(thumbImg);
+          if (imageUrls.length > 1) {
+            var dots = document.createElement('div');
+            dots.className = 'photo-dots';
+            for (var i = 0; i < imageUrls.length; i++) {
+              dots.appendChild(document.createElement('span'));
+            }
+            iconEl.appendChild(dots);
+          }
         } else {
           iconEl.textContent = initials(lot.name);
         }
-        row.querySelector('.cat').textContent = lot.category || 'Surplus';
         row.querySelector('h3').textContent = lot.name;
-        row.querySelector('.desc').textContent = lot.description || '';
+        row.querySelector('.meta-cat').textContent = lot.category || 'Surplus';
+        var snippetEl = row.querySelector('.snippet');
+        if (lot.description) {
+          snippetEl.textContent = lot.description;
+        } else {
+          snippetEl.style.display = 'none';
+        }
         row.addEventListener('click', function () {
           window.location.href = '/surplus/shop/lot/?id=' + encodeURIComponent(lot.id);
         });
