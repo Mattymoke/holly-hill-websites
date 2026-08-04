@@ -1,0 +1,4 @@
+.wrangler
+node_modules
+.git
+excel-sync

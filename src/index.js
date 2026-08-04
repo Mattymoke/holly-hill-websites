@@ -85,7 +85,7 @@ async function handleMedia(env, key) {
 
 async function handleListLots(env) {
   const { results } = await env.DB.prepare(
-    "SELECT id, name, category, description, website_price_cents FROM lots WHERE status = 'available' ORDER BY created_at DESC"
+    "SELECT id, name, category, description, website_price_cents, image_urls FROM lots WHERE status = 'available' ORDER BY created_at DESC"
   ).all();
   return json({ lots: results });
 }

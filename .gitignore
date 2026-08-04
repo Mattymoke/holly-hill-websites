@@ -1,3 +1,8 @@
 excel-sync/config.ini
 excel-sync/pending_lot.json
 excel-sync/result.json
+excel-sync/lots.xlsx
+excel-sync/lots.xlsm
+excel-sync/~$*
+node_modules/
+.wrangler/

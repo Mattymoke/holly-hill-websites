@@ -93,6 +93,7 @@ def main():
     price_dollars = lot.get("price_dollars")
     status = lot.get("status")
     photo_paths = lot.get("photo_paths") or []
+    clear_images = bool(lot.get("clear_images", False))
 
     if not lot_id or not name:
         raise SyncError("pending_lot.json must include at least 'id' and 'name'")
@@ -112,6 +113,7 @@ def main():
         "name": name,
         "website_price_cents": str(website_price_cents),
         "status": status,
+        "clear_images": "true" if clear_images else "false",
     }
     if category:
         data["category"] = category

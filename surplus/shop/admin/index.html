@@ -64,6 +64,8 @@
   th{ text-align:left; font-family:var(--mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--line); }
   td{ padding:10px; border-bottom:1px solid var(--line); vertical-align:middle; }
   td.name{ font-weight:600; }
+  .thumb{ width:48px; height:48px; border-radius:8px; object-fit:cover; display:block; border:1px solid var(--line); background:var(--void); }
+  .thumb-placeholder{ border:1px dashed var(--line); }
   .status-pill{ font-family:var(--mono); font-size:10px; letter-spacing:0.04em; text-transform:uppercase; padding:4px 10px; border-radius:20px; }
   .status-available{ background:rgba(43,232,220,0.12); color:var(--cyan); }
   .status-reserved{ background:rgba(201,138,44,0.15); color:#E0B86B; }
@@ -146,10 +148,10 @@
         <div class="table-scroll">
           <table>
             <thead>
-              <tr><th>Lot</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr>
+              <tr><th></th><th>Lot</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr>
             </thead>
             <tbody id="lotsTableBody">
-              <tr class="empty-row"><td colspan="6">Loading&hellip;</td></tr>
+              <tr class="empty-row"><td colspan="7">Loading&hellip;</td></tr>
             </tbody>
           </table>
         </div>
@@ -215,15 +217,26 @@
       }
     }
 
+    function parseImageUrls(lot) {
+      if (!lot.image_urls) return [];
+      try {
+        var parsed = JSON.parse(lot.image_urls);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
     function renderLots(lots) {
       if (!lots.length) {
-        lotsTableBody.innerHTML = '<tr class="empty-row"><td colspan="6">No lots yet — add one above.</td></tr>';
+        lotsTableBody.innerHTML = '<tr class="empty-row"><td colspan="7">No lots yet — add one above.</td></tr>';
         return;
       }
       lotsTableBody.innerHTML = '';
       lots.forEach(function (lot) {
         var tr = document.createElement('tr');
         tr.innerHTML =
+          '<td class="thumb-cell"></td>' +
           '<td class="mono"></td>' +
           '<td class="name"></td>' +
           '<td class="cat"></td>' +
@@ -239,6 +252,19 @@
             '<button class="btn btn-ghost save-btn">Save</button>' +
             '<button class="btn btn-danger delete-btn">Delete</button>' +
           '</td>';
+        var imageUrls = parseImageUrls(lot);
+        var thumbCell = tr.querySelector('.thumb-cell');
+        if (imageUrls.length) {
+          var thumbImg = document.createElement('img');
+          thumbImg.className = 'thumb';
+          thumbImg.src = imageUrls[0];
+          thumbImg.alt = '';
+          thumbCell.appendChild(thumbImg);
+        } else {
+          var thumbPlaceholder = document.createElement('div');
+          thumbPlaceholder.className = 'thumb thumb-placeholder';
+          thumbCell.appendChild(thumbPlaceholder);
+        }
         tr.querySelector('.mono').textContent = lot.id;
         tr.querySelector('.name').textContent = lot.name;
         tr.querySelector('.cat').textContent = lot.category || '—';

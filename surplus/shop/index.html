@@ -86,8 +86,10 @@
 
   .row-icon{
     width:56px; height:56px; border-radius:10px; background:var(--grad); display:flex; align-items:center; justify-content:center;
-    font-family:var(--display); font-weight:700; font-size:20px; color:var(--void); flex-shrink:0;
+    font-family:var(--display); font-weight:700; font-size:20px; color:var(--void); flex-shrink:0; overflow:hidden;
   }
+  .row-icon.has-image{ background:var(--void-3); }
+  .row-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
   @media(max-width:600px){ .row-icon{ width:44px; height:44px; font-size:16px; } }
 
   .row-main .cat{ font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
@@ -185,6 +187,15 @@
       var words = name.trim().split(/\s+/).slice(0, 2);
       return words.map(function (w) { return w[0]; }).join('').toUpperCase();
     }
+    function parseImageUrls(lot) {
+      if (!lot.image_urls) return [];
+      try {
+        var parsed = JSON.parse(lot.image_urls);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
 
     function renderAuthArea() {
       authArea.innerHTML = '';
@@ -269,7 +280,17 @@
             '<div class="row-price">' + money(lot.website_price_cents) + '</div>' +
             '<button class="btn btn-primary btn-sm buy-btn">Buy Now</button>' +
           '</div>';
-        row.querySelector('.row-icon').textContent = initials(lot.name);
+        var iconEl = row.querySelector('.row-icon');
+        var imageUrls = parseImageUrls(lot);
+        if (imageUrls.length) {
+          iconEl.classList.add('has-image');
+          var thumbImg = document.createElement('img');
+          thumbImg.src = imageUrls[0];
+          thumbImg.alt = '';
+          iconEl.appendChild(thumbImg);
+        } else {
+          iconEl.textContent = initials(lot.name);
+        }
         row.querySelector('.cat').textContent = lot.category || 'Surplus';
         row.querySelector('h3').textContent = lot.name;
         row.querySelector('.desc').textContent = lot.description || '';
