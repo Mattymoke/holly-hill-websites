@@ -2,23 +2,37 @@ Attribute VB_Name = "PublishMacro"
 Option Explicit
 
 ' Core row-publishing logic for the Holly Hill Surplus shop sync, plus a
-' manual "force resync this row" entry point.
+' manual "force resync this row" entry point and the JSON helpers shared
+' with the two-way pull/reconcile logic in ThisWorkbook.cls.
 '
-' PublishRow is the shared engine: it builds pending_lot.json for one row,
-' runs publish_lot.py (waiting for it to finish), reads result.json, and
-' writes the outcome back into columns H (Last Synced) and I (Sync Status).
-' It is silent (no MsgBox) and returns True/False so it can be called from
-' both PublishSelectedRow (this module) and Workbook_BeforeSave (in the
+' PublishRow is the shared push engine: it builds pending_lot.json for one
+' row, runs publish_lot.py (waiting for it to finish), reads result.json,
+' and writes the outcome back into Last Synced / Sync Status. It is silent
+' (no MsgBox) and returns True/False so it can be called from both
+' PublishSelectedRow (this module) and Workbook_BeforeSave (in the
 ' ThisWorkbook module) without popping up a dialog per row during auto-sync.
 '
+' PullRemoteStatus is the pull side: it runs pull_status.py once and
+' returns a Dictionary of lot id -> status, or Nothing if the pull failed
+' for any reason -- callers should treat Nothing as "skip reconciliation
+' this save," not as an error to surface loudly.
+'
+' Columns (Lots sheet):
+'   A-K  Lot #, Category, Item Name, Description, Price, Status, Photo 1-5
+'   L    Last Synced (timestamp)
+'   M    Sync Status ("OK" or "ERROR: ..." or a reconciliation note)
+'   N    Last Synced Fingerprint (hidden) -- A-K as of the last sync attempt
+'   O    Last Synced Photo Paths (hidden) -- combined Photo 1-5 paths already uploaded
+'
 ' Expects this workbook to live in the same excel-sync\ folder as
-' publish_lot.py, config.ini, and requirements.txt.
+' publish_lot.py, pull_status.py, config.ini, and requirements.txt.
 
 Sub PublishSelectedRow()
     ' Manual "force resync this row" button. Re-sends every photo path
-    ' currently in column G (not just new ones) and never clears images --
-    ' it's a deliberate full resync, distinct from the auto-sync-on-save
-    ' incremental behavior in Workbook_BeforeSave.
+    ' currently in columns G:K (not just new ones) and never clears images
+    ' -- it's a deliberate full resync, distinct from the auto-sync-on-save
+    ' incremental behavior in Workbook_BeforeSave. Does not pull/reconcile
+    ' status from the website -- that's a Workbook_BeforeSave-only feature.
     Dim ws As Worksheet
     Set ws = ActiveSheet
 
@@ -66,7 +80,7 @@ Sub PublishSelectedRow()
     End If
 
     Dim photoPathsCSV As String
-    photoPathsCSV = Trim(ws.Cells(r, 7).Value)
+    photoPathsCSV = CombinePhotoColumns(ws, r)
 
     Application.Cursor = xlWait
     Dim success As Boolean
@@ -77,11 +91,11 @@ Sub PublishSelectedRow()
         ' Keep the fingerprint / last-synced-photos columns current too, so
         ' a routine save right after this doesn't think there's still an
         ' unsynced change pending for this row.
-        ws.Cells(r, 10).Value = BuildFingerprint(ws, r)
-        ws.Cells(r, 11).Value = photoPathsCSV
+        ws.Cells(r, 14).Value = BuildFingerprint(ws, r)
+        ws.Cells(r, 15).Value = photoPathsCSV
         MsgBox "Lot '" & lotID & "' published successfully.", vbInformation, "Publish Lot"
     Else
-        MsgBox "Publish failed for lot '" & lotID & "'. See column I (Sync Status) for details.", _
+        MsgBox "Publish failed for lot '" & lotID & "'. See column M (Sync Status) for details.", _
             vbCritical, "Publish Lot"
     End If
 End Sub
@@ -175,15 +189,15 @@ Function PublishRow(ws As Worksheet, rowNum As Long, photoPathsCSV As String, cl
     Dim exitCode As Long
     exitCode = shellObj.Run(cmd, 0, True) ' 0 = hidden window, True = wait
 
-    ' --- Read result.json and update H / I for this row --------------------
+    ' --- Read result.json and update L / M for this row --------------------
 
     Dim resultPath As String
     resultPath = ThisWorkbook.Path & "\result.json"
 
-    ws.Cells(rowNum, 8).Value = Now ' Last Synced
+    ws.Cells(rowNum, 12).Value = Now ' Last Synced
 
     If Dir(resultPath) = "" Then
-        ws.Cells(rowNum, 9).Value = "ERROR: result.json was not created -- check that Python " & _
+        ws.Cells(rowNum, 13).Value = "ERROR: result.json was not created -- check that Python " & _
             "is installed and on PATH"
         PublishRow = False
         Exit Function
@@ -196,28 +210,85 @@ Function PublishRow(ws As Worksheet, rowNum As Long, photoPathsCSV As String, cl
     isSuccess = (InStr(1, resultText, Chr(34) & "success" & Chr(34) & ": true") > 0)
 
     If isSuccess Then
-        ws.Cells(rowNum, 9).Value = "OK"
+        ws.Cells(rowNum, 13).Value = "OK"
         PublishRow = True
     Else
         Dim errMsg As String
         errMsg = ExtractJSONStringValue(resultText, "error")
         If errMsg = "" Then errMsg = "Unknown error -- check result.json manually."
-        ws.Cells(rowNum, 9).Value = "ERROR: " & errMsg
+        ws.Cells(rowNum, 13).Value = "ERROR: " & errMsg
         PublishRow = False
     End If
 End Function
 
-' A-G concatenated with "|" separators -- cheap change-detection fingerprint
-' stored in column J after a successful sync and compared against on the
-' next save.
+' Runs pull_status.py and returns a Dictionary of lot id -> status if it
+' succeeded, or Nothing if the pull failed for any reason (network, script
+' missing, bad response, etc.). Callers should treat Nothing as "skip
+' reconciliation this save," not as an error to surface loudly -- push
+' behavior must keep working even when the pull side is unavailable.
+Function PullRemoteStatus() As Object
+    Dim shellObj As Object
+    Set shellObj = CreateObject("WScript.Shell")
+
+    Dim cmd As String
+    cmd = "cmd.exe /c cd /d " & Chr(34) & ThisWorkbook.Path & Chr(34) & _
+        " && python pull_status.py"
+
+    Dim exitCode As Long
+    exitCode = shellObj.Run(cmd, 0, True)
+
+    Dim remoteStatusPath As String
+    remoteStatusPath = ThisWorkbook.Path & "\remote_status.json"
+
+    If Dir(remoteStatusPath) = "" Then
+        Set PullRemoteStatus = Nothing
+        Exit Function
+    End If
+
+    Dim resultText As String
+    resultText = ReadTextFile(remoteStatusPath)
+
+    If InStr(1, resultText, Chr(34) & "success" & Chr(34) & ": true") = 0 Then
+        Set PullRemoteStatus = Nothing
+        Exit Function
+    End If
+
+    Set PullRemoteStatus = ParseRemoteStatusMap(resultText)
+End Function
+
+' A-K concatenated with "|" separators -- cheap change-detection fingerprint
+' stored in column N after a successful sync and compared against on the
+' next save. Covers every data column (Lot#, Category, Name, Description,
+' Price, Status, Photo 1-5), so a change to any of them is detected.
 Function BuildFingerprint(ws As Worksheet, r As Long) As String
-    BuildFingerprint = CStr(ws.Cells(r, 1).Value) & "|" & _
-        CStr(ws.Cells(r, 2).Value) & "|" & _
-        CStr(ws.Cells(r, 3).Value) & "|" & _
-        CStr(ws.Cells(r, 4).Value) & "|" & _
-        CStr(ws.Cells(r, 5).Value) & "|" & _
-        CStr(ws.Cells(r, 6).Value) & "|" & _
-        CStr(ws.Cells(r, 7).Value)
+    Dim result As String
+    Dim c As Long
+    result = ""
+    For c = 1 To 11 ' A:K
+        If c > 1 Then result = result & "|"
+        result = result & CStr(ws.Cells(r, c).Value)
+    Next c
+    BuildFingerprint = result
+End Function
+
+' Combines the Photo 1-5 columns (G:K) into the same semicolon-joined
+' representation GetNewPaths / BuildPhotoPathsJSON already expect, skipping
+' any blank boxes.
+Function CombinePhotoColumns(ws As Worksheet, r As Long) As String
+    Dim result As String
+    Dim c As Long
+    Dim onePath As String
+    Dim firstItem As Boolean
+    firstItem = True
+    For c = 7 To 11 ' G:K
+        onePath = Trim(ws.Cells(r, c).Value)
+        If onePath <> "" Then
+            If Not firstItem Then result = result & ";"
+            result = result & onePath
+            firstItem = False
+        End If
+    Next c
+    CombinePhotoColumns = result
 End Function
 
 ' Returns the semicolon-separated paths present in currentCSV but not in
@@ -344,7 +415,8 @@ End Function
 
 ' Extracts the string value for "key": "..." out of a JSON text blob,
 ' respecting \" and \\ escapes. Good enough for reading back our own
-' result.json without needing a full JSON parser library.
+' result.json / remote_status.json without needing a full JSON parser
+' library.
 Private Function ExtractJSONStringValue(ByVal jsonText As String, ByVal key As String) As String
     Dim searchKey As String
     searchKey = Chr(34) & key & Chr(34) & ":"
@@ -395,4 +467,94 @@ Private Function ExtractJSONStringValue(ByVal jsonText As String, ByVal key As S
     Loop
 
     ExtractJSONStringValue = result
+End Function
+
+' Parses remote_status.json's "lots": {"<id>": {"status": "...", ...}, ...}
+' object into a Dictionary of id -> status. Written against the exact,
+' predictable shape json.dump(..., indent=2) produces on the Python side --
+' not a general-purpose JSON parser.
+Private Function ParseRemoteStatusMap(ByVal jsonText As String) As Object
+    Dim result As Object
+    Set result = CreateObject("Scripting.Dictionary")
+
+    Dim lotsKeyPos As Long
+    lotsKeyPos = InStr(1, jsonText, Chr(34) & "lots" & Chr(34))
+    If lotsKeyPos = 0 Then
+        Set ParseRemoteStatusMap = result
+        Exit Function
+    End If
+
+    Dim lotsBraceStart As Long
+    lotsBraceStart = InStr(lotsKeyPos, jsonText, "{")
+    If lotsBraceStart = 0 Then
+        Set ParseRemoteStatusMap = result
+        Exit Function
+    End If
+
+    Dim lotsBraceEnd As Long
+    lotsBraceEnd = FindMatchingBrace(jsonText, lotsBraceStart)
+    If lotsBraceEnd = 0 Then
+        Set ParseRemoteStatusMap = result
+        Exit Function
+    End If
+
+    Dim pos As Long
+    pos = lotsBraceStart + 1
+
+    Do While pos < lotsBraceEnd
+        Dim keyStart As Long
+        keyStart = InStr(pos, jsonText, Chr(34))
+        If keyStart = 0 Or keyStart >= lotsBraceEnd Then Exit Do
+
+        Dim keyEnd As Long
+        keyEnd = InStr(keyStart + 1, jsonText, Chr(34))
+        If keyEnd = 0 Then Exit Do
+
+        Dim lotId As String
+        lotId = Mid(jsonText, keyStart + 1, keyEnd - keyStart - 1)
+
+        Dim objBraceStart As Long
+        objBraceStart = InStr(keyEnd, jsonText, "{")
+        If objBraceStart = 0 Or objBraceStart > lotsBraceEnd Then Exit Do
+
+        Dim objBraceEnd As Long
+        objBraceEnd = FindMatchingBrace(jsonText, objBraceStart)
+        If objBraceEnd = 0 Then Exit Do
+
+        Dim objText As String
+        objText = Mid(jsonText, objBraceStart, objBraceEnd - objBraceStart + 1)
+
+        Dim statusVal As String
+        statusVal = ExtractJSONStringValue(objText, "status")
+
+        If lotId <> "" Then
+            If Not result.Exists(lotId) Then
+                result.Add lotId, statusVal
+            End If
+        End If
+
+        pos = objBraceEnd + 1
+    Loop
+
+    Set ParseRemoteStatusMap = result
+End Function
+
+Private Function FindMatchingBrace(ByVal text As String, ByVal openPos As Long) As Long
+    Dim depth As Long
+    depth = 0
+    Dim i As Long
+    For i = openPos To Len(text)
+        Dim ch As String
+        ch = Mid(text, i, 1)
+        If ch = "{" Then
+            depth = depth + 1
+        ElseIf ch = "}" Then
+            depth = depth - 1
+            If depth = 0 Then
+                FindMatchingBrace = i
+                Exit Function
+            End If
+        End If
+    Next i
+    FindMatchingBrace = 0
 End Function

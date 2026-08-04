@@ -17,9 +17,10 @@
 //   POST /api/admin/lots/delete  -> delete a lot
 //   GET  /api/admin/orders       -> list all orders, across all buyers
 //
-// Script-only route (requires header "Authorization: Bearer <SYNC_API_KEY>",
-// not Clerk auth -- this is for the Excel-to-website sync helper script):
+// Script-only routes (require header "Authorization: Bearer <SYNC_API_KEY>",
+// not Clerk auth -- these are for the Excel-to-website sync helper scripts):
 //   POST /api/admin/sync-lot     -> upsert a lot + upload its photos to R2
+//   GET  /api/sync/lots          -> id/status/updated_at for every lot, for two-way sync
 //
 // Requires these secrets:
 //   wrangler secret put STRIPE_SECRET_KEY
@@ -518,6 +519,17 @@ async function handleSyncLot(request, env) {
   });
 }
 
+async function handleSyncLotsList(request, env) {
+  if (!isSyncAuthed(request, env)) {
+    return json({ error: "Not authorized" }, 401);
+  }
+
+  const { results } = await env.DB.prepare(
+    "SELECT id, status, updated_at FROM lots"
+  ).all();
+  return json({ lots: results });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -566,6 +578,9 @@ export default {
     }
     if (url.pathname === "/api/admin/sync-lot" && request.method === "POST") {
       return handleSyncLot(request, env);
+    }
+    if (url.pathname === "/api/sync/lots" && request.method === "GET") {
+      return handleSyncLotsList(request, env);
     }
 
     return env.ASSETS.fetch(request);

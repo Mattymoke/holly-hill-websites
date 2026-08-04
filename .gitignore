@@ -1,6 +1,7 @@
 excel-sync/config.ini
 excel-sync/pending_lot.json
 excel-sync/result.json
+excel-sync/remote_status.json
 excel-sync/lots.xlsx
 excel-sync/lots.xlsm
 excel-sync/~$*
