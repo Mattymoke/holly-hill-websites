@@ -255,6 +255,7 @@ async function verifyTurnstile(token, env) {
     body: params,
   });
   const data = await res.json();
+  console.error("Turnstile siteverify response:", JSON.stringify(data));
   return data.success === true;
 }
 
