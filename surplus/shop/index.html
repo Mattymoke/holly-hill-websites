@@ -101,6 +101,36 @@
   .row-ebay{ font-family:var(--mono); font-size:10.5px; color:var(--muted); text-decoration:line-through; }
 
   .empty{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:60px 20px; border:1px dashed var(--line); border-radius:14px; }
+
+  /* ---------- recently sold (trust signal, not shoppable) ---------- */
+  .sold-section{ border-top:1px solid var(--line); padding:50px 0 80px; }
+  .sold-heading{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 18px;
+  }
+  .sold-grid{ display:grid; gap:14px; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); }
+  .sold-card{
+    position:relative; background:var(--void-2); border:1px solid var(--line); border-radius:10px;
+    overflow:hidden; opacity:0.85;
+  }
+  .sold-thumb-wrap{ position:relative; width:100%; aspect-ratio:1; background:var(--void-3); overflow:hidden; }
+  .sold-thumb{ width:100%; height:100%; object-fit:cover; filter:grayscale(1) brightness(0.75); display:block; }
+  .sold-thumb-placeholder{
+    width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:16px; color:var(--muted);
+  }
+  .sold-ribbon{
+    position:absolute; z-index:2; top:12px; right:-30px; width:120px; text-align:center;
+    transform:rotate(40deg); background:var(--grad); color:var(--void);
+    font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+    padding:3px 0; box-shadow:0 2px 6px rgba(0,0,0,0.3);
+  }
+  .sold-body{ padding:12px 14px 14px; }
+  .sold-cat{ font-family:var(--mono); font-size:10px; letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .sold-name{ font-family:var(--display); font-weight:700; font-size:14.5px; margin:0 0 8px; color:var(--paper); }
+  .sold-meta{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .sold-price{ font-family:var(--mono); font-size:13px; color:var(--muted); text-decoration:line-through; }
+  .sold-when{ font-family:var(--mono); font-size:10.5px; color:var(--muted); white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -161,6 +191,13 @@
     </div>
   </div>
 
+  <section class="sold-section" id="soldSection" style="display:none;">
+    <div class="wrap">
+      <h2 class="sold-heading">Recently Sold</h2>
+      <div class="sold-grid" id="soldGrid"></div>
+    </div>
+  </section>
+
   <script src="/surplus/shop/clerk-loader.js"></script>
   <script>
     var authArea = document.getElementById('auth-area');
@@ -172,6 +209,8 @@
     var maxPriceInput = document.getElementById('maxPrice');
     var sortSelect = document.getElementById('sortSelect');
     var clearFiltersBtn = document.getElementById('clearFilters');
+    var soldSection = document.getElementById('soldSection');
+    var soldGrid = document.getElementById('soldGrid');
 
     var clerkInstance = null;
     var allLots = [];
@@ -195,6 +234,14 @@
       } catch (err) {
         return [];
       }
+    }
+    function relativeSoldDate(iso) {
+      if (!iso) return '';
+      var then = new Date(iso + 'Z').getTime();
+      var days = Math.max(0, Math.round((Date.now() - then) / 86400000));
+      if (days === 0) return 'Sold today';
+      if (days === 1) return 'Sold 1 day ago';
+      return 'Sold ' + days + ' days ago';
     }
 
     function renderAuthArea() {
@@ -313,6 +360,60 @@
       }
     }
 
+    function renderSoldLots(lots) {
+      // An empty "Recently Sold" undermines the trust signal it's meant
+      // to give -- better to not show the section at all than show it empty.
+      if (!lots.length) {
+        soldSection.style.display = 'none';
+        return;
+      }
+      soldSection.style.display = '';
+      soldGrid.innerHTML = '';
+      lots.forEach(function (lot) {
+        var card = document.createElement('div');
+        card.className = 'sold-card';
+        card.innerHTML =
+          '<div class="sold-thumb-wrap"><div class="sold-ribbon">Sold</div></div>' +
+          '<div class="sold-body">' +
+            '<div class="sold-cat"></div>' +
+            '<h4 class="sold-name"></h4>' +
+            '<div class="sold-meta">' +
+              '<span class="sold-price"></span>' +
+              '<span class="sold-when"></span>' +
+            '</div>' +
+          '</div>';
+        var thumbWrap = card.querySelector('.sold-thumb-wrap');
+        var imageUrls = parseImageUrls(lot);
+        if (imageUrls.length) {
+          var thumbImg = document.createElement('img');
+          thumbImg.className = 'sold-thumb';
+          thumbImg.src = imageUrls[0];
+          thumbImg.alt = '';
+          thumbWrap.appendChild(thumbImg);
+        } else {
+          var placeholder = document.createElement('div');
+          placeholder.className = 'sold-thumb-placeholder';
+          placeholder.textContent = initials(lot.name);
+          thumbWrap.appendChild(placeholder);
+        }
+        card.querySelector('.sold-cat').textContent = lot.category || 'Surplus';
+        card.querySelector('.sold-name').textContent = lot.name;
+        card.querySelector('.sold-price').textContent = money(lot.website_price_cents);
+        card.querySelector('.sold-when').textContent = relativeSoldDate(lot.updated_at);
+        soldGrid.appendChild(card);
+      });
+    }
+
+    async function loadSoldLots() {
+      try {
+        var res = await fetch('/api/lots/sold');
+        var data = await res.json();
+        renderSoldLots(data.lots || []);
+      } catch (err) {
+        soldSection.style.display = 'none';
+      }
+    }
+
     async function handleBuy(lotId, buttonEl) {
       hideStatus();
       if (!clerkInstance.user) {
@@ -364,6 +465,7 @@
     });
 
     loadLots();
+    loadSoldLots();
   </script>
 
 </body>
