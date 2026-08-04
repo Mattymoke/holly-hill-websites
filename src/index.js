@@ -5,6 +5,7 @@
 //   POST /api/checkout          -> create a Stripe Checkout session (requires login)
 //   POST /api/webhook/stripe    -> Stripe calls this when payment completes
 //   GET  /api/orders            -> order history for the logged-in buyer
+//   GET  /media/:key            -> serves an uploaded lot photo from R2
 //
 // Admin-only routes (require the signed-in user to match ADMIN_USER_ID):
 //   GET  /api/admin/lots         -> list ALL lots, any status
@@ -13,11 +14,16 @@
 //   POST /api/admin/lots/delete  -> delete a lot
 //   GET  /api/admin/orders       -> list all orders, across all buyers
 //
+// Script-only route (requires header "Authorization: Bearer <SYNC_API_KEY>",
+// not Clerk auth -- this is for the Excel-to-website sync helper script):
+//   POST /api/admin/sync-lot     -> upsert a lot + upload its photos to R2
+//
 // Requires these secrets:
 //   wrangler secret put STRIPE_SECRET_KEY
 //   wrangler secret put STRIPE_WEBHOOK_SECRET
 //   wrangler secret put CLERK_SECRET_KEY
 //   wrangler secret put ADMIN_USER_ID
+//   wrangler secret put SYNC_API_KEY
 
 import { verifyToken } from "@clerk/backend";
 
@@ -52,6 +58,29 @@ async function getAdminUserId(request, env) {
   }
   if (userId !== env.ADMIN_USER_ID) return null;
   return userId;
+}
+
+function isSyncAuthed(request, env) {
+  const authHeader = request.headers.get("Authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!env.SYNC_API_KEY || !token) return false;
+  return token === env.SYNC_API_KEY;
+}
+
+function sanitizeFilename(name) {
+  return (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+async function handleMedia(env, key) {
+  const object = await env.IMAGES.get(key);
+  if (!object) return new Response("Not found", { status: 404 });
+
+  const headers = new Headers();
+  headers.set("content-type", object.httpMetadata?.contentType || "application/octet-stream");
+  headers.set("cache-control", "public, max-age=31536000, immutable");
+  headers.set("etag", object.httpEtag);
+
+  return new Response(object.body, { headers });
 }
 
 async function handleListLots(env) {
@@ -292,6 +321,83 @@ async function handleAdminListOrders(request, env) {
   return json({ orders: results });
 }
 
+const SYNC_LOT_STATUSES = ["available", "reserved", "sold", "shipped"];
+
+async function handleSyncLot(request, env) {
+  if (!isSyncAuthed(request, env)) {
+    return json({ error: "Not authorized" }, 401);
+  }
+
+  const formData = await request.formData();
+
+  const id = (formData.get("id") || "").toString().trim();
+  const name = (formData.get("name") || "").toString().trim();
+  const category = formData.get("category") ? formData.get("category").toString().trim() : null;
+  const description = formData.get("description") ? formData.get("description").toString().trim() : null;
+  const status = (formData.get("status") || "").toString().trim();
+  const websitePriceCents = Number(formData.get("website_price_cents"));
+  const clearImages = ["1", "true", "yes"].includes(
+    (formData.get("clear_images") || "").toString().trim().toLowerCase()
+  );
+
+  if (!id || !name) {
+    return json({ error: "id and name are required" }, 400);
+  }
+  if (!Number.isInteger(websitePriceCents) || websitePriceCents < 0) {
+    return json({ error: "website_price_cents must be a non-negative integer" }, 400);
+  }
+  if (!SYNC_LOT_STATUSES.includes(status)) {
+    return json({ error: "status must be one of " + SYNC_LOT_STATUSES.join(", ") }, 400);
+  }
+
+  const files = formData.getAll("images").filter((f) => f instanceof File && f.size > 0);
+  const newImageUrls = [];
+  for (const file of files) {
+    const key = `${id}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
+    await env.IMAGES.put(key, file, {
+      httpMetadata: { contentType: file.type || "application/octet-stream" },
+    });
+    newImageUrls.push(`https://hollyhillohio.com/media/${encodeURIComponent(key)}`);
+  }
+
+  const existing = await env.DB.prepare("SELECT image_urls FROM lots WHERE id = ?").bind(id).first();
+
+  let finalImageUrls = newImageUrls;
+  if (!clearImages && existing?.image_urls) {
+    try {
+      finalImageUrls = JSON.parse(existing.image_urls).concat(newImageUrls);
+    } catch (err) {
+      finalImageUrls = newImageUrls;
+    }
+  }
+
+  if (existing) {
+    await env.DB.prepare(
+      `UPDATE lots SET
+         name = ?, category = ?, description = ?, website_price_cents = ?,
+         status = ?, image_urls = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+      .bind(name, category, description, websitePriceCents, status, JSON.stringify(finalImageUrls), id)
+      .run();
+  } else {
+    await env.DB.prepare(
+      `INSERT INTO lots (id, name, category, description, website_price_cents, status, image_urls)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(id, name, category, description, websitePriceCents, status, JSON.stringify(finalImageUrls))
+      .run();
+  }
+
+  const updated = await env.DB.prepare("SELECT * FROM lots WHERE id = ?").bind(id).first();
+  return json({
+    lot: {
+      ...updated,
+      image_urls: updated.image_urls ? JSON.parse(updated.image_urls) : [],
+    },
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -308,6 +414,10 @@ export default {
     if (url.pathname === "/api/orders" && request.method === "GET") {
       return handleOrders(request, env);
     }
+    if (url.pathname.startsWith("/media/") && request.method === "GET") {
+      const key = decodeURIComponent(url.pathname.slice("/media/".length));
+      return handleMedia(env, key);
+    }
 
     if (url.pathname === "/api/admin/lots" && request.method === "GET") {
       return handleAdminListLots(request, env);
@@ -323,6 +433,9 @@ export default {
     }
     if (url.pathname === "/api/admin/orders" && request.method === "GET") {
       return handleAdminListOrders(request, env);
+    }
+    if (url.pathname === "/api/admin/sync-lot" && request.method === "POST") {
+      return handleSyncLot(request, env);
     }
 
     return env.ASSETS.fetch(request);

@@ -20,8 +20,9 @@ CREATE TABLE IF NOT EXISTS lots (
     description     TEXT,
     website_price_cents INTEGER NOT NULL,       -- price in cents, e.g. $70.00 -> 7000
     status          TEXT NOT NULL DEFAULT 'available'
-                        CHECK (status IN ('available', 'reserved', 'sold')),
+                        CHECK (status IN ('available', 'reserved', 'sold', 'shipped')),
     stripe_price_id TEXT,                       -- optional: pre-created Stripe Price object
+    image_urls      TEXT,                       -- JSON array of image URLs, e.g. ["https://.../a.jpg", ...]
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -42,10 +43,3 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(clerk_user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_lot ON orders(lot_id);
 CREATE INDEX IF NOT EXISTS idx_lots_status ON lots(status);
-
--- Example seed row (delete before going live -- this is just to prove the
--- schema works end to end)
-INSERT OR IGNORE INTO lots (id, name, category, description, website_price_cents, status)
-VALUES ('A1234', 'Peace Dollar Lot (38 coins)', 'Coins & Currency',
-        '38 common-date silver dollars, cleaned. Melt value checked by hand before pricing.',
-        132500, 'available');
