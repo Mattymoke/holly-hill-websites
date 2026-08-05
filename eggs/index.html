@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Egg Catalog — Holly Hill 🥚</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="The Egg Catalog — Holly Hill">
+<meta property="og:description" content="Pasture eggs from a small backyard flock — brown, blue, speckled, and cream, gathered daily.">
+<meta property="og:image" content="https://hollyhillohio.com/og-farm.png">
+<meta property="og:url" content="https://hollyhillohio.com/eggs/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Egg Catalog — Holly Hill">
+<meta name="twitter:description" content="Pasture eggs from a small backyard flock — brown, blue, speckled, and cream, gathered daily.">
+<meta name="twitter:image" content="https://hollyhillohio.com/og-farm.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0A0D0A; --void-2:#12160F; --mist:rgba(230,235,220,0.06);
+    --ink:#0A0D0A; --white:#F4F1E6;
+    --display:'Anton', sans-serif;
+    --body:'Poppins', -apple-system, sans-serif;
+    --mono:'JetBrains Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--void); color:var(--white); font-family:var(--body); }
+  a{ color:inherit; } img,svg{ display:block; max-width:100%; }
+  button{ font:inherit; }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+  }
+  a:focus-visible, button:focus-visible{ outline:3px solid #E8B84B; outline-offset:3px; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 24px; }
+
+  .grain{
+    position:fixed; inset:0; z-index:80; pointer-events:none; opacity:0.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+  }
+  .mist-scene{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+  .mote{ position:absolute; bottom:-10px; width:3px; height:3px; border-radius:50%; background:radial-gradient(circle,#E8DCC2,rgba(232,220,194,0)); opacity:0; animation:moteRise linear infinite; }
+  @keyframes moteRise{ 0%{ transform:translate(0,0); opacity:0; } 15%{ opacity:0.5; } 85%{ opacity:0.2; } 100%{ transform:translate(16px,-100vh); opacity:0; } }
+
+  .stroke{ color:var(--white); text-shadow:0 0 30px currentColor, 0 0 60px rgba(232,184,75,0.35); }
+  .stroke-white{ color:var(--white); text-shadow:0 2px 24px rgba(0,0,0,0.6); }
+
+  /* ---------- header ---------- */
+  header{ position:relative; z-index:2; padding:44px 0 34px; text-align:center; background:radial-gradient(ellipse at 50% -20%, rgba(201,138,44,0.18), transparent 60%), var(--void); color:#fff; border-bottom:1px solid rgba(232,220,194,0.08); }
+  .backlink{ display:inline-block; font-family:var(--body); font-weight:700; font-size:13px; text-decoration:none; color:#fff; opacity:0.75; margin-bottom:18px; }
+  .backlink:hover{ opacity:1; }
+  header h1{ font-family:var(--display); font-size:clamp(38px,7vw,64px); margin:0 0 10px; letter-spacing:0.01em; }
+  header p{ font-family:var(--body); font-weight:600; color:#cfcfd6; max-width:46ch; margin:0 auto; font-size:15px; }
+
+  /* ---------- grid ---------- */
+  .catalog{ position:relative; z-index:2; padding:50px 0 70px; }
+  .grid{ display:grid; gap:24px; grid-template-columns:1fr; }
+  @media(min-width:640px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+  @media(min-width:980px){ .grid{ grid-template-columns:repeat(3,1fr); } }
+
+  .card{
+    border:1px solid rgba(232,220,194,0.1); background:var(--void-2);
+    border-radius:18px; padding:22px 20px 20px; cursor:pointer; text-align:left;
+    position:relative; overflow:hidden;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s ease, box-shadow .2s ease;
+  }
+  .card::before{
+    content:""; position:absolute; left:50%; top:38%; width:220px; height:220px; margin:-110px 0 0 -110px;
+    border-radius:50%; filter:blur(46px); background:var(--glow, #C98A2C); opacity:0.35;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .card:hover::before, .card:focus-visible::before{ opacity:0.55; transform:scale(1.15); }
+  .card:hover, .card:focus-visible{ transform:translateY(-6px); border-color:rgba(232,220,194,0.28); box-shadow:0 18px 40px rgba(0,0,0,0.45); }
+  .card:active{ transform:translateY(-2px); }
+  .card .num{ position:relative; font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:0.08em; background:rgba(244,241,230,0.12); padding:4px 10px; border-radius:20px; display:inline-block; margin-bottom:10px; color:var(--white); }
+  .card .art{ position:relative; width:100px; margin:6px auto 4px; filter:drop-shadow(0 0 18px rgba(0,0,0,0.5)); }
+  .card h2{ position:relative; font-family:var(--display); font-size:26px; margin:6px 0 2px; text-align:center; color:var(--white); }
+  .card .latin{ position:relative; font-style:italic; font-weight:600; font-size:11.5px; text-align:center; opacity:0.7; margin-bottom:10px; }
+  .card .footer-row{ position:relative; display:flex; align-items:center; justify-content:space-between; margin-top:10px; }
+  .card .price{ font-family:var(--display); font-size:20px; color:var(--white); }
+  .card .tap{ font-family:var(--mono); font-size:10px; letter-spacing:0.06em; background:rgba(232,220,194,0.14); padding:5px 10px; border-radius:20px; }
+
+  .bg-rainbow{ --glow:#D9A441; background:linear-gradient(160deg,#1A140A,var(--void-2)); }
+  .bg-brown{ --glow:#B5732E; background:linear-gradient(160deg,#1C130A,var(--void-2)); }
+  .bg-bluegreen{ --glow:#5FA88F; background:linear-gradient(160deg,#0B1A16,var(--void-2)); }
+  .bg-speckled{ --glow:#8A5A3A; background:linear-gradient(160deg,#160E0A,var(--void-2)); }
+  .bg-cream{ --glow:#C9B383; background:linear-gradient(160deg,#191509,var(--void-2)); }
+
+  /* ---------- modal ---------- */
+  .overlay{
+    position:fixed; inset:0; z-index:100; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+    opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+  .modal{
+    color:#fff; border-radius:22px; max-width:460px; width:100%; max-height:90vh; overflow-y:auto;
+    padding:34px 30px 30px; position:relative; text-align:center;
+    transform:scale(0.85) rotate(-2deg); opacity:0; transition:transform .28s cubic-bezier(.2,1.4,.3,1), opacity .2s ease;
+  }
+  .overlay.open .modal{ transform:scale(1) rotate(0deg); opacity:1; }
+  .modal-close{
+    position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%;
+    background:rgba(0,0,0,0.3); border:none; color:#fff; font-size:18px; cursor:pointer; line-height:1;
+  }
+  .modal-close:hover{ background:rgba(0,0,0,0.5); }
+  .modal .num{ font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:0.08em; background:rgba(244,241,230,0.12); padding:5px 12px; border-radius:20px; display:inline-block; margin-bottom:14px; }
+  .modal .art{ width:150px; margin:0 auto 8px; }
+  .modal h2{ font-family:var(--display); font-size:clamp(34px,6vw,48px); margin:6px 0 4px; line-height:0.95; }
+  .modal .latin{ font-style:italic; font-weight:600; font-size:13px; opacity:0.85; margin-bottom:14px; }
+  .modal .caption{ font-weight:800; font-size:17px; max-width:26ch; margin:0 auto 16px; line-height:1.3; }
+  .modal .facts{ display:flex; flex-direction:column; gap:8px; margin-bottom:18px; }
+  .modal .fact{ font-family:var(--mono); font-size:12px; background:rgba(244,241,230,0.1); padding:8px 14px; border-radius:20px; }
+  .modal .price-stamp{
+    display:inline-block; font-family:var(--display); font-size:28px; color:#fff; background:rgba(0,0,0,0.35);
+    padding:8px 22px; border-radius:8px; border:2.5px solid #fff; transform:rotate(-3deg); margin-bottom:16px;
+  }
+  .modal .price-unit{ display:block; font-family:var(--mono); font-size:9.5px; letter-spacing:0.05em; margin-top:6px; }
+  .modal .how-made{ text-align:left; background:rgba(244,241,230,0.05); border:1px solid rgba(244,241,230,0.1); border-radius:14px; padding:16px 18px; }
+  .modal .how-made h3{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; margin:0 0 12px; color:var(--white); opacity:0.75; }
+  .modal .how-made ol{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .modal .how-made li{ display:flex; align-items:flex-start; gap:10px; font-size:13px; color:var(--white); opacity:0.92; line-height:1.4; }
+  .hm-num{
+    flex-shrink:0; width:20px; height:20px; border-radius:50%; background:var(--glow, #C98A2C);
+    color:#0A0D0A; font-family:var(--mono); font-weight:700; font-size:11px;
+    display:flex; align-items:center; justify-content:center; margin-top:1px;
+  }
+
+  footer{ background:var(--ink); color:#fff; padding:40px 0; text-align:center; }
+  footer p{ color:#cfcfd6; max-width:44ch; margin:0 auto 20px; font-size:14px; }
+  .btn{ font-family:var(--body); font-weight:800; font-size:14px; text-decoration:none; padding:13px 26px; border-radius:40px; display:inline-block; margin:0 6px; }
+  .btn-primary{ background:#fff; color:var(--ink); }
+  .btn-ghost{ border:2px solid rgba(255,255,255,0.4); color:#fff; }
+</style>
+</head>
+<body>
+
+  <div class="grain"></div>
+  <div class="mist-scene">
+    <span class="mote" style="left:45.4%; animation-duration:18.7s; animation-delay:-1.8s;"></span>
+    <span class="mote" style="left:46.7%; animation-duration:18.1s; animation-delay:-9.9s;"></span>
+    <span class="mote" style="left:19.7%; animation-duration:18.1s; animation-delay:-8.9s;"></span>
+    <span class="mote" style="left:78.1%; animation-duration:13.1s; animation-delay:-16.7s;"></span>
+    <span class="mote" style="left:10.7%; animation-duration:21.7s; animation-delay:-7.4s;"></span>
+    <span class="mote" style="left:6.0%; animation-duration:23.8s; animation-delay:-0.8s;"></span>
+    <span class="mote" style="left:64.8%; animation-duration:19.4s; animation-delay:-20.2s;"></span>
+    <span class="mote" style="left:3.4%; animation-duration:18.3s; animation-delay:-22.6s;"></span>
+    <span class="mote" style="left:20.3%; animation-duration:14.9s; animation-delay:-23.3s;"></span>
+    <span class="mote" style="left:46.5%; animation-duration:17.3s; animation-delay:-3.8s;"></span>
+    <span class="mote" style="left:51.8%; animation-duration:19.7s; animation-delay:-12.0s;"></span>
+    <span class="mote" style="left:65.6%; animation-duration:17.5s; animation-delay:-17.3s;"></span>
+    <span class="mote" style="left:97.8%; animation-duration:23.9s; animation-delay:-3.8s;"></span>
+    <span class="mote" style="left:69.9%; animation-duration:15.8s; animation-delay:-18.5s;"></span>
+    <span class="mote" style="left:29.7%; animation-duration:12.8s; animation-delay:-5.6s;"></span>
+    <span class="mote" style="left:40.4%; animation-duration:22.2s; animation-delay:-14.7s;"></span>
+    <span class="mote" style="left:94.0%; animation-duration:22.2s; animation-delay:-24.0s;"></span>
+    <span class="mote" style="left:22.1%; animation-duration:22.9s; animation-delay:-12.7s;"></span>
+    <span class="mote" style="left:96.1%; animation-duration:16.8s; animation-delay:-22.2s;"></span>
+    <span class="mote" style="left:62.4%; animation-duration:21.3s; animation-delay:-17.5s;"></span>
+  </div>
+
+
+  <header>
+    <div class="wrap">
+      <a href="/" class="backlink">&larr; Holly Hill</a>
+      <h1 class="stroke-white">THE EGG<br>CATALOG 🥚</h1>
+      <p>Gathered every morning from a small backyard flock. Tap any carton for the details.</p>
+    </div>
+  </header>
+
+  <main class="catalog">
+    <div class="wrap">
+      <div class="grid">
+
+        <button class="card bg-rainbow" data-target="d-rainbow">
+          <div class="num">01 / 05</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M52,14 C68,14 80,38 80,54 C80,70 68,78 52,78 C36,78 24,70 24,54 C24,38 36,14 52,14 Z" fill="#B5732E" stroke="#0D0D0F" stroke-width="3"/>
+            <path d="M108,10 C124,10 136,34 136,50 C136,66 124,74 108,74 C92,74 80,66 80,50 C80,34 92,10 108,10 Z" fill="#5FA88F" stroke="#0D0D0F" stroke-width="3"/>
+            <path d="M80,40 C93,40 103,60 103,74 C103,88 93,94 80,94 C67,94 57,88 57,74 C57,60 67,40 80,40 Z" fill="#F4F1E6" stroke="#0D0D0F" stroke-width="3"/>
+          </svg>
+          <h2>Rainbow Dozen</h2>
+          <div class="latin">the mixed carton</div>
+          <div class="footer-row"><span class="price">$7</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-brown" data-target="d-brown">
+          <div class="num">02 / 05</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M80,8 C104,8 122,42 122,64 C122,86 104,94 80,94 C56,94 38,86 38,64 C38,42 56,8 80,8 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+          </svg>
+          <h2>Brown</h2>
+          <div class="latin">Rhode Island Red</div>
+          <div class="footer-row"><span class="price">$6</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-bluegreen" data-target="d-bluegreen">
+          <div class="num">03 / 05</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M80,8 C104,8 122,42 122,64 C122,86 104,94 80,94 C56,94 38,86 38,64 C38,42 56,8 80,8 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+          </svg>
+          <h2>Blue &amp; Green</h2>
+          <div class="latin">Easter Egger</div>
+          <div class="footer-row"><span class="price">$7</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-speckled" data-target="d-speckled">
+          <div class="num">04 / 05</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M80,8 C104,8 122,42 122,64 C122,86 104,94 80,94 C56,94 38,86 38,64 C38,42 56,8 80,8 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+            <circle cx="66" cy="46" r="3.5" fill="#8A5A3A" opacity="0.75"/>
+            <circle cx="92" cy="40" r="2.5" fill="#8A5A3A" opacity="0.7"/>
+            <circle cx="100" cy="60" r="3" fill="#8A5A3A" opacity="0.75"/>
+            <circle cx="70" cy="68" r="2.8" fill="#8A5A3A" opacity="0.7"/>
+            <circle cx="86" cy="76" r="2.2" fill="#8A5A3A" opacity="0.65"/>
+            <circle cx="58" cy="60" r="2" fill="#8A5A3A" opacity="0.6"/>
+          </svg>
+          <h2>Speckled</h2>
+          <div class="latin">French Black Copper Marans</div>
+          <div class="footer-row"><span class="price">$9</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+        <button class="card bg-cream" data-target="d-cream">
+          <div class="num">05 / 05</div>
+          <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M80,6 C108,6 128,42 128,66 C128,90 108,96 80,96 C52,96 32,90 32,66 C32,42 52,6 80,6 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/>
+          </svg>
+          <h2>Cream</h2>
+          <div class="latin">Buff Orpington</div>
+          <div class="footer-row"><span class="price">$6</span><span class="tap">TAP TO VIEW &rarr;</span></div>
+        </button>
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>Quantities are limited to what the flock lays that week — message ahead to hold a dozen.</p>
+      <a class="btn btn-primary" href="/#contact">Ask what's available &rarr;</a>
+      <a class="btn btn-ghost" href="/">&larr; Back to Holly Hill</a>
+    </div>
+  </footer>
+
+  <!-- ===== detail templates (hidden, cloned into modal on click) ===== -->
+  <template id="d-rainbow">
+    <div class="num">01 / 05</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M52,14 C68,14 80,38 80,54 C80,70 68,78 52,78 C36,78 24,70 24,54 C24,38 36,14 52,14 Z" fill="#B5732E" stroke="#0D0D0F" stroke-width="3"/><path d="M108,10 C124,10 136,34 136,50 C136,66 124,74 108,74 C92,74 80,66 80,50 C80,34 92,10 108,10 Z" fill="#5FA88F" stroke="#0D0D0F" stroke-width="3"/><path d="M80,40 C93,40 103,60 103,74 C103,88 93,94 80,94 C67,94 57,88 57,74 C57,60 67,40 80,40 Z" fill="#F4F1E6" stroke="#0D0D0F" stroke-width="3"/></svg>
+    <h2>Rainbow Dozen</h2>
+    <div class="latin">the mixed carton</div>
+    <div class="caption">one carton, every color 🌈</div>
+    <div class="facts">
+      <div class="fact">🥚 a dozen mixed straight from the whole flock</div>
+      <div class="fact">📈 our most popular carton, no contest</div>
+    </div>
+    <div class="price-stamp">$7<span class="price-unit">PER DOZEN</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Every hen in the flock lays into the same nesting boxes</li><li><span class="hm-num">2</span>Gathered each morning and sorted by shell color</li><li><span class="hm-num">3</span>Packed into one carton so you get a bit of everything</li></ol></div>
+  </template>
+
+  <template id="d-brown">
+    <div class="num">02 / 05</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M80,8 C104,8 122,42 122,64 C122,86 104,94 80,94 C56,94 38,86 38,64 C38,42 56,8 80,8 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/></svg>
+    <h2>Brown</h2>
+    <div class="latin">Rhode Island Red</div>
+    <div class="caption">the everyday dozen 🐓</div>
+    <div class="facts">
+      <div class="fact">🌾 our most consistent layers, rain or shine</div>
+      <div class="fact">🥚 medium-large, deep golden yolks</div>
+    </div>
+    <div class="price-stamp">$6<span class="price-unit">PER DOZEN</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Hens free-range the yard by day, locked in safe at night</li><li><span class="hm-num">2</span>Fed a mixed grain &amp; kitchen-scrap diet</li><li><span class="hm-num">3</span>Nesting boxes checked and gathered every morning</li></ol></div>
+  </template>
+
+  <template id="d-bluegreen">
+    <div class="num">03 / 05</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M80,8 C104,8 122,42 122,64 C122,86 104,94 80,94 C56,94 38,86 38,64 C38,42 56,8 80,8 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/></svg>
+    <h2>Blue &amp; Green</h2>
+    <div class="latin">Easter Egger</div>
+    <div class="caption">the ones that make people do a double-take 💙</div>
+    <div class="facts">
+      <div class="fact">🎨 shell color ranges hen to hen, blue to sage green</div>
+      <div class="fact">🐣 bred for the eggs, not a recognized standard breed</div>
+    </div>
+    <div class="price-stamp">$7<span class="price-unit">PER DOZEN</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>No dye, no tricks — it's just how the breed lays</li><li><span class="hm-num">2</span>Free-ranged alongside the rest of the flock</li><li><span class="hm-num">3</span>Gathered daily and kept separate so the colors don't mix</li></ol></div>
+  </template>
+
+  <template id="d-speckled">
+    <div class="num">04 / 05</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M80,8 C104,8 122,42 122,64 C122,86 104,94 80,94 C56,94 38,86 38,64 C38,42 56,8 80,8 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/><circle cx="66" cy="46" r="3.5" fill="#8A5A3A" opacity="0.75"/><circle cx="92" cy="40" r="2.5" fill="#8A5A3A" opacity="0.7"/><circle cx="100" cy="60" r="3" fill="#8A5A3A" opacity="0.75"/><circle cx="70" cy="68" r="2.8" fill="#8A5A3A" opacity="0.7"/><circle cx="86" cy="76" r="2.2" fill="#8A5A3A" opacity="0.65"/><circle cx="58" cy="60" r="2" fill="#8A5A3A" opacity="0.6"/></svg>
+    <h2>Speckled</h2>
+    <div class="latin">French Black Copper Marans</div>
+    <div class="caption">the rare one — heritage French breed 🍫</div>
+    <div class="facts">
+      <div class="fact">🐔 prized worldwide for the darkest eggs a chicken lays</div>
+      <div class="fact">🌰 deep chocolate shell, speckled unique to each hen</div>
+    </div>
+    <div class="price-stamp">$9<span class="price-unit">PER DOZEN &middot; LIMITED</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Only a small handful of Marans hens in the flock</li><li><span class="hm-num">2</span>Same daily gathering, kept separate from the rest</li><li><span class="hm-num">3</span>Sells out first — message ahead if you want a dozen</li></ol></div>
+  </template>
+
+  <template id="d-cream">
+    <div class="num">05 / 05</div>
+    <svg class="art" viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg"><path d="M80,6 C108,6 128,42 128,66 C128,90 108,96 80,96 C52,96 32,90 32,66 C32,42 52,6 80,6 Z" fill="#fff" stroke="#0D0D0F" stroke-width="3"/></svg>
+    <h2>Cream</h2>
+    <div class="latin">Buff Orpington</div>
+    <div class="caption">big, gentle hens, big pale eggs 🤍</div>
+    <div class="facts">
+      <div class="fact">🐥 famously friendly, easygoing birds</div>
+      <div class="fact">🥚 large eggs, pale cream shell</div>
+    </div>
+    <div class="price-stamp">$6<span class="price-unit">PER DOZEN</span></div>
+    <div class="how-made"><h3>How It's Made</h3><ol><li><span class="hm-num">1</span>Free-ranged the same yard as the rest of the flock</li><li><span class="hm-num">2</span>Slower to lay than the Reds, but bigger eggs for it</li><li><span class="hm-num">3</span>Gathered, candled for cracks, and packed same-day</li></ol></div>
+  </template>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalHeading">
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+    var overlay = document.getElementById('overlay');
+    var modalContent = document.getElementById('modalContent');
+    var modalClose = document.getElementById('modalClose');
+    var lastFocused = null;
+
+    var bgMap = {
+      'd-rainbow':'bg-rainbow','d-brown':'bg-brown','d-bluegreen':'bg-bluegreen',
+      'd-speckled':'bg-speckled','d-cream':'bg-cream'
+    };
+
+    function openModal(targetId, triggerEl){
+      var tpl = document.getElementById(targetId);
+      if (!tpl) return;
+      modalContent.innerHTML = '';
+      modalContent.appendChild(tpl.content.cloneNode(true));
+      document.getElementById('modal').className = 'modal ' + (bgMap[targetId] || '');
+      lastFocused = triggerEl;
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      modalClose.focus();
+    }
+    function closeModal(){
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+      if (lastFocused) lastFocused.focus();
+    }
+
+    document.querySelectorAll('.card').forEach(function(card){
+      card.addEventListener('click', function(){
+        openModal(card.dataset.target, card);
+      });
+    });
+    modalClose.addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+    });
+  </script>
+
+</body>
+</html>
