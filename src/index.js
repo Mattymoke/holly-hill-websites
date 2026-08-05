@@ -229,7 +229,54 @@ async function verifyStripeSignature(request, env, rawBody) {
   return expected === signature;
 }
 
-async function handleStripeWebhook(request, env) {
+// Fire-and-forget from handleStripeWebhook via ctx.waitUntil -- must never
+// throw, since a Resend failure here must never affect the webhook response
+// or the order/lot status update that already happened before this runs.
+async function sendOrderConfirmationEmail(env, session, orderId, lotId) {
+  try {
+    const buyerEmail = session.customer_details && session.customer_details.email;
+    if (!buyerEmail) {
+      console.error("Order confirmation email skipped -- no buyer email on session for order", orderId);
+      return;
+    }
+
+    const lot = await env.DB.prepare("SELECT name, website_price_cents FROM lots WHERE id = ?")
+      .bind(lotId)
+      .first();
+    const lotName = lot ? lot.name : "your item";
+    const amount = lot ? "$" + (lot.website_price_cents / 100).toFixed(2) : "";
+
+    const html =
+      `<p>Thanks for your order from Holly Hill Surplus!</p>` +
+      `<p><strong>Item:</strong> ${escapeHtml(lotName)}</p>` +
+      (amount ? `<p><strong>Amount paid:</strong> ${escapeHtml(amount)}</p>` : "") +
+      `<p><strong>Order ID:</strong> ${escapeHtml(orderId)}</p>` +
+      `<p>We'll be in touch about pickup or shipping. Just reply to this email with any questions.</p>`;
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + env.RESEND_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Holly Hill Surplus <orders@hollyhillohio.com>",
+        to: buyerEmail,
+        subject: "Order confirmed — " + lotName,
+        html,
+      }),
+    });
+
+    if (!resendRes.ok) {
+      const errText = await resendRes.text();
+      console.error("Order confirmation email failed:", resendRes.status, errText);
+    }
+  } catch (err) {
+    console.error("Order confirmation email threw:", err.message);
+  }
+}
+
+async function handleStripeWebhook(request, env, ctx) {
   const rawBody = await request.text();
   const valid = await verifyStripeSignature(request, env, rawBody);
   console.log("Webhook signature valid:", valid);
@@ -253,6 +300,14 @@ async function handleStripeWebhook(request, env) {
       ).bind(lotId),
     ]);
     console.log("Order update complete");
+
+    // Non-blocking: the order is already marked paid above, so a Resend
+    // failure here can never affect order processing or the response
+    // below. waitUntil (not a bare unawaited call) so the runtime doesn't
+    // kill the request in-flight once the response is returned.
+    if (ctx && ctx.waitUntil) {
+      ctx.waitUntil(sendOrderConfirmationEmail(env, session, orderId, lotId));
+    }
   }
 
   return json({ received: true });
@@ -555,7 +610,7 @@ async function handleSyncLotsList(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/lots" && request.method === "GET") {
@@ -578,7 +633,7 @@ export default {
       return handleCheckout(request, env);
     }
     if (url.pathname === "/api/webhook/stripe" && request.method === "POST") {
-      return handleStripeWebhook(request, env);
+      return handleStripeWebhook(request, env, ctx);
     }
     if (url.pathname === "/api/orders" && request.method === "GET") {
       return handleOrders(request, env);
