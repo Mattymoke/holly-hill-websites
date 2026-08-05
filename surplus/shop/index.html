@@ -44,6 +44,8 @@
   header.hero{ padding:34px 0 18px; }
   header.hero h1{ font-family:var(--display); font-weight:700; font-size:clamp(28px,5vw,40px); margin:0 0 6px; }
   header.hero p{ color:var(--muted); font-size:13.5px; max-width:64ch; }
+  .stats-bar{ font-family:var(--mono); font-size:12.5px; color:var(--muted); margin-top:14px; }
+  .stats-bar strong{ color:var(--paper); }
 
   #status-msg{ font-family:var(--mono); font-size:13px; padding:12px 16px; border-radius:8px; margin:0 0 16px; display:none; }
   #status-msg.show{ display:block; }
@@ -68,6 +70,11 @@
   }
   .price-inputs span{ color:var(--muted); font-size:12px; }
   .clear-filters{ font-family:var(--mono); font-size:11px; color:var(--cyan); background:none; border:none; text-decoration:underline; padding:0; margin-top:14px; }
+  .search-input{
+    width:100%; background:var(--void); border:1px solid var(--line); border-radius:6px; color:var(--paper);
+    padding:9px 10px; font-family:var(--body); font-size:13px;
+  }
+  .filter-check .count{ color:var(--muted); font-size:11.5px; margin-left:3px; }
 
   .results-bar{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
   .results-count{ font-family:var(--mono); font-size:12.5px; color:var(--muted); }
@@ -78,36 +85,69 @@
 
   .listing-rows{ display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
   .listing-row{
-    background:var(--void-2); padding:18px 20px; display:grid; grid-template-columns:120px 1fr auto; gap:18px; align-items:center;
+    background:var(--void-2); padding:24px 28px; display:grid; grid-template-columns:180px 1fr auto; gap:24px; align-items:center;
     transition:background .15s ease; cursor:pointer;
   }
   .listing-row:hover{ background:var(--void-3); }
-  @media(max-width:600px){ .listing-row{ grid-template-columns:90px 1fr; grid-template-rows:auto auto; } .listing-row .row-action{ grid-column:1 / -1; } }
+  @media(max-width:600px){ .listing-row{ grid-template-columns:135px 1fr; grid-template-rows:auto auto; } .listing-row .row-action{ grid-column:1 / -1; } }
 
   .row-icon{
-    width:120px; height:120px; border-radius:12px; background:var(--grad); display:flex; align-items:center; justify-content:center;
-    font-family:var(--display); font-weight:700; font-size:34px; color:var(--void); flex-shrink:0; overflow:hidden; position:relative;
+    width:180px; height:180px; border-radius:12px; background:var(--grad); display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:48px; color:var(--void); flex-shrink:0; overflow:hidden; position:relative;
   }
   .row-icon.has-image{ background:var(--void-3); }
   .row-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
-  @media(max-width:600px){ .row-icon{ width:90px; height:90px; font-size:26px; } }
+  @media(max-width:600px){ .row-icon{ width:135px; height:135px; font-size:36px; } }
 
   .photo-dots{ position:absolute; bottom:8px; left:50%; transform:translateX(-50%); display:flex; gap:4px; z-index:2; }
   .photo-dots span{ width:5px; height:5px; border-radius:50%; background:rgba(245,243,250,0.9); box-shadow:0 0 0 1px rgba(10,9,18,0.5); }
 
-  .row-main h3{ font-family:var(--display); font-weight:700; font-size:19px; margin:0 0 6px; }
-  .row-main .meta{ font-family:var(--mono); font-size:11.5px; color:var(--muted); letter-spacing:0.02em; }
+  .row-main h3{ font-family:var(--display); font-weight:700; font-size:23px; margin:0 0 6px; display:inline; }
+  .new-badge{
+    display:inline-block; font-family:var(--mono); font-size:9.5px; letter-spacing:0.05em; text-transform:uppercase;
+    background:rgba(43,232,220,0.15); color:var(--cyan); padding:3px 8px; border-radius:20px; margin-left:10px; vertical-align:middle;
+  }
+  .row-main .meta{ font-family:var(--mono); font-size:14px; color:var(--muted); letter-spacing:0.02em; }
   .row-main .meta .sep{ margin:0 6px; color:var(--muted); opacity:0.6; }
   .row-main .snippet{
-    font-size:11px; color:var(--muted); opacity:0.7; margin:4px 0 0; max-width:60ch;
+    font-size:12.5px; color:var(--muted); opacity:0.7; margin:6px 0 0; max-width:60ch;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
 
   .row-action{ text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
-  .row-price{ font-family:var(--display); font-weight:700; font-size:24px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .row-price{ font-family:var(--display); font-weight:700; font-size:30px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .buy-it-now-label{ font-family:var(--mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); }
 
   .empty{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:60px 20px; border:1px dashed var(--line); border-radius:14px; }
+
+  /* ---------- loading skeleton ---------- */
+  .skel-row{
+    background:var(--void-2); padding:24px 28px; display:grid; grid-template-columns:180px 1fr auto; gap:24px; align-items:center;
+  }
+  @media(max-width:600px){ .skel-row{ grid-template-columns:135px 1fr; } }
+  .skel{
+    background:linear-gradient(90deg, var(--void-3) 25%, rgba(245,243,250,0.08) 37%, var(--void-3) 63%);
+    background-size:400% 100%; animation:skelShimmer 1.4s ease infinite; border-radius:8px;
+  }
+  @keyframes skelShimmer{ 0%{ background-position:100% 50%; } 100%{ background-position:0 50%; } }
+  .skel-icon{ width:180px; height:180px; border-radius:12px; }
+  @media(max-width:600px){ .skel-icon{ width:135px; height:135px; } }
+  .skel-line{ height:16px; margin-bottom:12px; }
+  .skel-line.short{ width:55%; margin-bottom:0; }
+  .skel-price{ width:80px; height:26px; }
+  @media (prefers-reduced-motion: reduce){ .skel{ animation:none; } }
+
+  /* ---------- sourcing ---------- */
+  .sourcing-section{ border-top:1px solid var(--line); padding:50px 0; }
+  .sourcing-heading{ font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+  .sourcing-title{ font-family:var(--display); font-weight:700; font-size:26px; margin:0 0 28px; }
+  .sourcing-grid{ display:grid; gap:20px; grid-template-columns:1fr; }
+  @media(min-width:640px){ .sourcing-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media(min-width:980px){ .sourcing-grid{ grid-template-columns:repeat(4,1fr); } }
+  .sourcing-step{ background:var(--void-2); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  .sourcing-num{ font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:10px; }
+  .sourcing-step h4{ font-family:var(--display); font-weight:700; font-size:17px; margin:0 0 8px; }
+  .sourcing-step p{ font-size:13px; color:var(--muted); margin:0; line-height:1.5; }
 
   /* ---------- recently sold (trust signal, not shoppable) ---------- */
   .sold-section{ border-top:1px solid var(--line); padding:50px 0 80px; }
@@ -156,6 +196,7 @@
     <header class="hero">
       <h1>The Shop</h1>
       <p>Every lot here is real, currently available, and priced cheaper than the same item on eBay — since there's no marketplace fee to cover.</p>
+      <div class="stats-bar" id="statsBar" style="display:none;"></div>
     </header>
 
     <div id="status-msg"></div>
@@ -163,6 +204,10 @@
     <div class="browse">
       <aside class="filters" id="filtersPanel">
         <h3>Filter</h3>
+        <div class="filter-group">
+          <h4>Search</h4>
+          <input type="search" id="searchInput" class="search-input" placeholder="Search lots&hellip;">
+        </div>
         <div class="filter-group">
           <h4>Category</h4>
           <div id="categoryChecks"></div>
@@ -192,11 +237,42 @@
           </div>
         </div>
         <div class="listing-rows" id="listingRows">
-          <div class="empty">Loading current lots&hellip;</div>
+          <div class="skel-row"><div class="skel skel-icon"></div><div><div class="skel skel-line"></div><div class="skel skel-line short"></div></div><div class="skel skel-price"></div></div>
+          <div class="skel-row"><div class="skel skel-icon"></div><div><div class="skel skel-line"></div><div class="skel skel-line short"></div></div><div class="skel skel-price"></div></div>
+          <div class="skel-row"><div class="skel skel-icon"></div><div><div class="skel skel-line"></div><div class="skel skel-line short"></div></div><div class="skel skel-price"></div></div>
         </div>
       </div>
     </div>
   </div>
+
+  <section class="sourcing-section">
+    <div class="wrap">
+      <div class="sourcing-heading">The Build-Up</div>
+      <h2 class="sourcing-title">How sourcing works</h2>
+      <div class="sourcing-grid">
+        <div class="sourcing-step">
+          <div class="sourcing-num">01</div>
+          <h4>Win the lot</h4>
+          <p>Sourced from public government and school-district surplus auctions — not private "wholesale" resellers.</p>
+        </div>
+        <div class="sourcing-step">
+          <div class="sourcing-num">02</div>
+          <h4>Verify it</h4>
+          <p>Mint marks checked, model numbers looked up, melt value calculated. If it isn't what the listing claimed, we walk.</p>
+        </div>
+        <div class="sourcing-step">
+          <div class="sourcing-num">03</div>
+          <h4>Clean &amp; test</h4>
+          <p>Every electronic powered on. Every coin re-examined in hand, not just from a photo.</p>
+        </div>
+        <div class="sourcing-step">
+          <div class="sourcing-num">04</div>
+          <h4>It's yours</h4>
+          <p>Listed at a fair, researched price. Local pickup or shipping arranged — no surprises at handoff.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section class="sold-section" id="soldSection" style="display:none;">
     <div class="wrap">
@@ -214,10 +290,12 @@
     var categoryChecks = document.getElementById('categoryChecks');
     var minPriceInput = document.getElementById('minPrice');
     var maxPriceInput = document.getElementById('maxPrice');
+    var searchInput = document.getElementById('searchInput');
     var sortSelect = document.getElementById('sortSelect');
     var clearFiltersBtn = document.getElementById('clearFilters');
     var soldSection = document.getElementById('soldSection');
     var soldGrid = document.getElementById('soldGrid');
+    var statsBar = document.getElementById('statsBar');
 
     var clerkInstance = null;
     var allLots = [];
@@ -241,6 +319,12 @@
       } catch (err) {
         return [];
       }
+    }
+    function isNewLot(lot) {
+      if (!lot.created_at) return false;
+      var created = new Date(lot.created_at.replace(' ', 'T') + 'Z').getTime();
+      if (isNaN(created)) return false;
+      return (Date.now() - created) < 7 * 24 * 60 * 60 * 1000;
     }
     function relativeSoldDate(iso) {
       if (!iso) return '';
@@ -272,7 +356,12 @@
     }
 
     function buildCategoryFilters() {
-      var cats = Array.from(new Set(allLots.map(function (l) { return l.category || 'Surplus'; }))).sort();
+      var counts = {};
+      allLots.forEach(function (l) {
+        var cat = l.category || 'Surplus';
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+      var cats = Object.keys(counts).sort();
       categoryChecks.innerHTML = '';
       cats.forEach(function (cat) {
         var label = document.createElement('label');
@@ -286,6 +375,10 @@
         });
         label.appendChild(input);
         label.appendChild(document.createTextNode(cat));
+        var countSpan = document.createElement('span');
+        countSpan.className = 'count';
+        countSpan.textContent = '(' + counts[cat] + ')';
+        label.appendChild(countSpan);
         categoryChecks.appendChild(label);
       });
     }
@@ -293,12 +386,17 @@
     function getFilteredSortedLots() {
       var min = parseFloat(minPriceInput.value);
       var max = parseFloat(maxPriceInput.value);
+      var query = searchInput.value.trim().toLowerCase();
       var filtered = allLots.filter(function (lot) {
         var cat = lot.category || 'Surplus';
         if (selectedCategories.size > 0 && !selectedCategories.has(cat)) return false;
         var price = lot.website_price_cents / 100;
         if (!isNaN(min) && price < min) return false;
         if (!isNaN(max) && price > max) return false;
+        if (query) {
+          var haystack = (lot.name + ' ' + (lot.description || '')).toLowerCase();
+          if (haystack.indexOf(query) === -1) return false;
+        }
         return true;
       });
       var sortVal = sortSelect.value;
@@ -327,6 +425,7 @@
           '<div class="row-icon"></div>' +
           '<div class="row-main">' +
             '<h3></h3>' +
+            (isNewLot(lot) ? '<span class="new-badge">New</span>' : '') +
             '<div class="meta"><span class="meta-cat"></span><span class="sep">&middot;</span><span>New Lexington, Ohio</span></div>' +
             '<p class="snippet"></p>' +
           '</div>' +
@@ -384,6 +483,19 @@
       } catch (err) {
         listingRows.innerHTML = '<div class="empty">Couldn\'t load lots right now. Try refreshing.</div>';
         resultsCount.textContent = '';
+      }
+    }
+
+    async function loadStatsBar() {
+      try {
+        var res = await fetch('/api/lots/sold/count');
+        var data = await res.json();
+        var count = data.count || 0;
+        if (!count) return;
+        statsBar.innerHTML = '<strong>' + count + '</strong> lot' + (count === 1 ? '' : 's') + ' sold so far';
+        statsBar.style.display = '';
+      } catch (err) {
+        // Stats bar is a nice-to-have -- fail silently, leave it hidden.
       }
     }
 
@@ -475,10 +587,12 @@
     sortSelect.addEventListener('change', renderResults);
     minPriceInput.addEventListener('input', renderResults);
     maxPriceInput.addEventListener('input', renderResults);
+    searchInput.addEventListener('input', renderResults);
     clearFiltersBtn.addEventListener('click', function () {
       selectedCategories.clear();
       minPriceInput.value = '';
       maxPriceInput.value = '';
+      searchInput.value = '';
       categoryChecks.querySelectorAll('input').forEach(function (i) { i.checked = false; });
       renderResults();
     });
@@ -493,6 +607,7 @@
 
     loadLots();
     loadSoldLots();
+    loadStatsBar();
   </script>
 
 </body>

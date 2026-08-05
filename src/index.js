@@ -3,6 +3,7 @@
 // Public routes:
 //   GET  /api/lots              -> list available lots (public)
 //   GET  /api/lots/sold         -> recently sold lots, for the "Recently Sold" trust section (public)
+//   GET  /api/lots/sold/count   -> total count of sold lots, for the shop stats bar (public)
 //   GET  /api/lots/featured     -> top-profit featured lots, for the public "Featured Lots" section (public)
 //   GET  /api/lots/:id          -> single lot detail, any status (public)
 //   POST /api/checkout          -> create a Stripe Checkout session (requires login)
@@ -92,9 +93,16 @@ async function handleMedia(env, key) {
 
 async function handleListLots(env) {
   const { results } = await env.DB.prepare(
-    "SELECT id, name, category, description, website_price_cents, image_urls FROM lots WHERE status = 'available' ORDER BY created_at DESC"
+    "SELECT id, name, category, description, website_price_cents, image_urls, created_at FROM lots WHERE status = 'available' ORDER BY created_at DESC"
   ).all();
   return json({ lots: results });
+}
+
+async function handleSoldCount(env) {
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM lots WHERE status = 'sold'"
+  ).first();
+  return json({ count: row ? row.count : 0 });
 }
 
 async function handleListSoldLots(env) {
@@ -552,6 +560,9 @@ export default {
 
     if (url.pathname === "/api/lots" && request.method === "GET") {
       return handleListLots(env);
+    }
+    if (url.pathname === "/api/lots/sold/count" && request.method === "GET") {
+      return handleSoldCount(env);
     }
     if (url.pathname === "/api/lots/sold" && request.method === "GET") {
       return handleListSoldLots(env);
