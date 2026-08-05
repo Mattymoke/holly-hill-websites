@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS lots (
                         CHECK (status IN ('available', 'reserved', 'sold', 'shipped')),
     stripe_price_id TEXT,                       -- optional: pre-created Stripe Price object
     image_urls      TEXT,                       -- JSON array of image URLs, e.g. ["https://.../a.jpg", ...]
+    is_featured     INTEGER NOT NULL DEFAULT 0,  -- 1 if this lot should surface in the public "Featured Lots" section
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );

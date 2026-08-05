@@ -18,18 +18,23 @@ Option Explicit
 ' this save," not as an error to surface loudly.
 '
 ' Columns (Lots sheet):
-'   A-K  Lot #, Category, Item Name, Description, Price, Status, Photo 1-5
-'   L    Last Synced (timestamp)
-'   M    Sync Status ("OK" or "ERROR: ..." or a reconciliation note)
-'   N    Last Synced Fingerprint (hidden) -- A-K as of the last sync attempt
-'   O    Last Synced Photo Paths (hidden) -- combined Photo 1-5 paths already uploaded
+'   A-F  Lot #, Category, Item Name, Description, Price, Status
+'   G    Original Price ($) -- PRIVATE, cost basis, never synced to the website
+'   H    Profit ($) -- PRIVATE, formula =E-G, never synced
+'   I    Featured -- formula-driven TRUE/FALSE, DOES sync to the website
+'   J-N  Photo 1-5
+'   O    Last Synced (timestamp)
+'   P    Sync Status ("OK" or "ERROR: ..." or a reconciliation note)
+'   Q    Last Synced Fingerprint (hidden) -- A-F,I,J-N as of the last sync attempt
+'   R    Last Synced Photo Paths (hidden) -- combined Photo 1-5 paths already uploaded
+'   T1/U1 "Feature Count:" label / value, referenced by the Featured formula
 '
 ' Expects this workbook to live in the same excel-sync\ folder as
 ' publish_lot.py, pull_status.py, config.ini, and requirements.txt.
 
 Sub PublishSelectedRow()
     ' Manual "force resync this row" button. Re-sends every photo path
-    ' currently in columns G:K (not just new ones) and never clears images
+    ' currently in columns J:N (not just new ones) and never clears images
     ' -- it's a deliberate full resync, distinct from the auto-sync-on-save
     ' incremental behavior in Workbook_BeforeSave. Does not pull/reconcile
     ' status from the website -- that's a Workbook_BeforeSave-only feature.
@@ -91,8 +96,8 @@ Sub PublishSelectedRow()
         ' Keep the fingerprint / last-synced-photos columns current too, so
         ' a routine save right after this doesn't think there's still an
         ' unsynced change pending for this row.
-        ws.Cells(r, 14).Value = BuildFingerprint(ws, r)
-        ws.Cells(r, 15).Value = photoPathsCSV
+        ws.Cells(r, 17).Value = BuildFingerprint(ws, r) ' Q
+        ws.Cells(r, 18).Value = photoPathsCSV ' R
         MsgBox "Lot '" & lotID & "' published successfully.", vbInformation, "Publish Lot"
     Else
         MsgBox "Publish failed for lot '" & lotID & "'. See column M (Sync Status) for details.", _
@@ -120,6 +125,11 @@ Function PublishRow(ws As Worksheet, rowNum As Long, photoPathsCSV As String, cl
     description = Trim(ws.Cells(rowNum, 4).Value)
     priceCellValue = ws.Cells(rowNum, 5).Value
     statusVal = Trim(ws.Cells(rowNum, 6).Value)
+    ' Column I (Featured) is formula-driven TRUE/FALSE -- it DOES sync.
+    ' Columns G/H (Original Price, Profit) are PRIVATE and are never read
+    ' here or sent in the payload.
+    Dim isFeatured As Boolean
+    isFeatured = CBool(ws.Cells(rowNum, 9).Value)
 
     ' --- Validation (silent -- just fail) --------------------------------
 
@@ -165,6 +175,7 @@ Function PublishRow(ws As Worksheet, rowNum As Long, photoPathsCSV As String, cl
     jsonPayload = jsonPayload & "  ""description"": """ & JSONEscape(description) & """," & vbCrLf
     jsonPayload = jsonPayload & "  ""price_dollars"": " & priceStr & "," & vbCrLf
     jsonPayload = jsonPayload & "  ""status"": """ & statusVal & """," & vbCrLf
+    jsonPayload = jsonPayload & "  ""featured"": " & IIf(isFeatured, "true", "false") & "," & vbCrLf
     If clearImages Then
         jsonPayload = jsonPayload & "  ""clear_images"": true," & vbCrLf
     End If
@@ -194,10 +205,10 @@ Function PublishRow(ws As Worksheet, rowNum As Long, photoPathsCSV As String, cl
     Dim resultPath As String
     resultPath = ThisWorkbook.Path & "\result.json"
 
-    ws.Cells(rowNum, 12).Value = Now ' Last Synced
+    ws.Cells(rowNum, 15).Value = Now ' O -- Last Synced
 
     If Dir(resultPath) = "" Then
-        ws.Cells(rowNum, 13).Value = "ERROR: result.json was not created -- check that Python " & _
+        ws.Cells(rowNum, 16).Value = "ERROR: result.json was not created -- check that Python " & _
             "is installed and on PATH"
         PublishRow = False
         Exit Function
@@ -210,13 +221,13 @@ Function PublishRow(ws As Worksheet, rowNum As Long, photoPathsCSV As String, cl
     isSuccess = (InStr(1, resultText, Chr(34) & "success" & Chr(34) & ": true") > 0)
 
     If isSuccess Then
-        ws.Cells(rowNum, 13).Value = "OK"
+        ws.Cells(rowNum, 16).Value = "OK" ' P -- Sync Status
         PublishRow = True
     Else
         Dim errMsg As String
         errMsg = ExtractJSONStringValue(resultText, "error")
         If errMsg = "" Then errMsg = "Unknown error -- check result.json manually."
-        ws.Cells(rowNum, 13).Value = "ERROR: " & errMsg
+        ws.Cells(rowNum, 16).Value = "ERROR: " & errMsg ' P -- Sync Status
         PublishRow = False
     End If
 End Function
@@ -256,22 +267,30 @@ Function PullRemoteStatus() As Object
     Set PullRemoteStatus = ParseRemoteStatusMap(resultText)
 End Function
 
-' A-K concatenated with "|" separators -- cheap change-detection fingerprint
-' stored in column N after a successful sync and compared against on the
-' next save. Covers every data column (Lot#, Category, Name, Description,
-' Price, Status, Photo 1-5), so a change to any of them is detected.
+' A,B,C,D,E,F,I,J,K,L,M,N concatenated with "|" separators -- cheap
+' change-detection fingerprint stored in column Q after a successful sync
+' and compared against on the next save. Covers every column that actually
+' syncs (Lot#, Category, Name, Description, Price, Status, Featured,
+' Photo 1-5). Deliberately EXCLUDES G/H (Original Price, Profit) -- those
+' never sync, so including them would trigger a meaningless push every time
+' a cost estimate is tweaked. Featured (I) IS included on purpose: it's how
+' a row whose own fields didn't change still gets re-pushed when another
+' row's cost change shifts the profit ranking and flips this row's
+' Featured status.
 Function BuildFingerprint(ws As Worksheet, r As Long) As String
+    Dim fpCols As Variant
+    fpCols = Array(1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14) ' A,B,C,D,E,F,I,J,K,L,M,N
     Dim result As String
-    Dim c As Long
+    Dim i As Long
     result = ""
-    For c = 1 To 11 ' A:K
-        If c > 1 Then result = result & "|"
-        result = result & CStr(ws.Cells(r, c).Value)
-    Next c
+    For i = LBound(fpCols) To UBound(fpCols)
+        If i > LBound(fpCols) Then result = result & "|"
+        result = result & CStr(ws.Cells(r, fpCols(i)).Value)
+    Next i
     BuildFingerprint = result
 End Function
 
-' Combines the Photo 1-5 columns (G:K) into the same semicolon-joined
+' Combines the Photo 1-5 columns (J:N) into the same semicolon-joined
 ' representation GetNewPaths / BuildPhotoPathsJSON already expect, skipping
 ' any blank boxes.
 Function CombinePhotoColumns(ws As Worksheet, r As Long) As String
@@ -280,7 +299,7 @@ Function CombinePhotoColumns(ws As Worksheet, r As Long) As String
     Dim onePath As String
     Dim firstItem As Boolean
     firstItem = True
-    For c = 7 To 11 ' G:K
+    For c = 10 To 14 ' J:N
         onePath = Trim(ws.Cells(r, c).Value)
         If onePath <> "" Then
             If Not firstItem Then result = result & ";"

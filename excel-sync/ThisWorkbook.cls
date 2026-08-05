@@ -33,11 +33,15 @@ Option Explicit
 '     time.
 '
 ' Columns (Lots sheet):
-'   A-K  Lot #, Category, Item Name, Description, Price, Status, Photo 1-5
-'   L    Last Synced (timestamp)
-'   M    Sync Status ("OK" / "ERROR: ..." / a reconciliation note)
-'   N    Last Synced Fingerprint (hidden)
-'   O    Last Synced Photo Paths (hidden)
+'   A-F  Lot #, Category, Item Name, Description, Price, Status
+'   G    Original Price ($) -- PRIVATE, never synced
+'   H    Profit ($) -- PRIVATE, never synced
+'   I    Featured -- formula-driven TRUE/FALSE, DOES sync
+'   J-N  Photo 1-5
+'   O    Last Synced (timestamp)
+'   P    Sync Status ("OK" / "ERROR: ..." / a reconciliation note)
+'   Q    Last Synced Fingerprint (hidden)
+'   R    Last Synced Photo Paths (hidden)
 
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
     On Error GoTo Finish
@@ -74,10 +78,10 @@ Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
             currentFingerprint = BuildFingerprint(ws, r)
 
             Dim storedFingerprint As String
-            storedFingerprint = CStr(ws.Cells(r, 14).Value) ' N
+            storedFingerprint = CStr(ws.Cells(r, 17).Value) ' Q
 
             Dim syncStatusVal As String
-            syncStatusVal = CStr(ws.Cells(r, 13).Value) ' M
+            syncStatusVal = CStr(ws.Cells(r, 16).Value) ' P
 
             Dim needsSync As Boolean
             needsSync = True
@@ -109,7 +113,7 @@ Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
                 currentPathsCSV = CombinePhotoColumns(ws, r)
 
                 Dim previousPathsCSV As String
-                previousPathsCSV = Trim(ws.Cells(r, 15).Value) ' O
+                previousPathsCSV = Trim(ws.Cells(r, 18).Value) ' R
 
                 Dim clearImages As Boolean
                 Dim pathsToSend As String
@@ -128,10 +132,10 @@ Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
                 success = PublishRow(ws, r, pathsToSend, clearImages)
 
                 If success Then
-                    ws.Cells(r, 14).Value = currentFingerprint
-                    ws.Cells(r, 15).Value = currentPathsCSV
+                    ws.Cells(r, 17).Value = currentFingerprint ' Q
+                    ws.Cells(r, 18).Value = currentPathsCSV ' R
                     If statusWasCorrected Then
-                        ws.Cells(r, 13).Value = "Website shows this sold -- local status corrected before syncing."
+                        ws.Cells(r, 16).Value = "Website shows this sold -- local status corrected before syncing." ' P
                     End If
                     syncedCount = syncedCount + 1
                 Else
@@ -146,9 +150,9 @@ Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
                         remoteVal = remoteStatus(lotId)
                         If remoteVal <> "" And LCase(remoteVal) <> LCase(Trim(ws.Cells(r, 6).Value)) Then
                             ws.Cells(r, 6).Value = remoteVal
-                            ws.Cells(r, 12).Value = Now
-                            ws.Cells(r, 14).Value = BuildFingerprint(ws, r)
-                            ws.Cells(r, 13).Value = "Updated from website: " & remoteVal
+                            ws.Cells(r, 15).Value = Now ' O
+                            ws.Cells(r, 17).Value = BuildFingerprint(ws, r) ' Q
+                            ws.Cells(r, 16).Value = "Updated from website: " & remoteVal ' P
                             pulledCount = pulledCount + 1
                         End If
                     End If

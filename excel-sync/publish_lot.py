@@ -94,6 +94,11 @@ def main():
     status = lot.get("status")
     photo_paths = lot.get("photo_paths") or []
     clear_images = bool(lot.get("clear_images", False))
+    # Featured comes straight from pending_lot.json, which the VBA side
+    # already populated from the sheet's Featured column (I). Original
+    # Price / Profit (G/H) are PRIVATE and never appear in pending_lot.json
+    # in the first place, so there's nothing to filter out here.
+    featured = bool(lot.get("featured", False))
 
     if not lot_id or not name:
         raise SyncError("pending_lot.json must include at least 'id' and 'name'")
@@ -114,6 +119,7 @@ def main():
         "website_price_cents": str(website_price_cents),
         "status": status,
         "clear_images": "true" if clear_images else "false",
+        "featured": "true" if featured else "false",
     }
     if category:
         data["category"] = category

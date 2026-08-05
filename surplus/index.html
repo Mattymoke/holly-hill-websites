@@ -222,6 +222,31 @@
   .listing-price{ font-family:var(--display); font-weight:700; font-size:26px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .listing-ebay{ font-family:var(--mono); font-size:11.5px; color:var(--muted); text-decoration:line-through; }
   .listing-save{ display:inline-block; font-family:var(--mono); font-size:10.5px; letter-spacing:0.03em; background:rgba(43,232,220,0.12); color:var(--cyan); padding:4px 10px; border-radius:20px; }
+
+  .featured-grid{ display:grid; gap:18px; grid-template-columns:repeat(2,1fr); }
+  @media(min-width:640px){ .featured-grid{ grid-template-columns:repeat(3,1fr); } }
+  @media(min-width:980px){ .featured-grid{ grid-template-columns:repeat(6,1fr); } }
+  .featured-card{
+    display:block; text-decoration:none; color:inherit;
+    background:linear-gradient(160deg, rgba(29,24,48,0.62), rgba(20,17,38,0.62));
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    border:1px solid rgba(245,243,250,0.12); border-radius:14px; overflow:hidden;
+    transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .featured-card:hover{ transform:translateY(-5px); border-color:rgba(255,46,154,0.5); box-shadow:0 18px 38px rgba(0,0,0,0.45); }
+  .featured-thumb-wrap{ position:relative; width:100%; aspect-ratio:1; background:var(--grad); overflow:hidden; }
+  .featured-thumb-wrap.has-image{ background:var(--void-3); }
+  .featured-thumb-wrap img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .featured-thumb-wrap .initials{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:700; font-size:28px; color:var(--void);
+  }
+  .featured-info{ padding:12px 14px; }
+  .featured-name{
+    font-family:var(--display); font-weight:700; font-size:14px; margin:0 0 6px; line-height:1.2;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .featured-price{ font-family:var(--display); font-weight:700; font-size:17px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .listings-empty{ text-align:center; color:var(--muted); font-family:var(--mono); font-size:13px; padding:30px; border:1px dashed rgba(245,243,250,0.15); border-radius:14px; }
   /* ---------- section shells ---------- */
   section{ padding:80px 0; position:relative; z-index:1; }
@@ -584,6 +609,17 @@
     </div>
   </section>
 
+  <section id="featured" style="display:none;">
+    <div class="wrap reveal">
+      <div class="section-head">
+        <div class="section-eyebrow">Featured Lots</div>
+        <h2 class="section-title">Staff picks, straight from the shop</h2>
+        <p class="section-sub">Buy these directly on the Surplus shop — no marketplace fees, no waiting.</p>
+      </div>
+      <div class="featured-grid" id="featuredGrid"></div>
+    </div>
+  </section>
+
   <section id="drop">
     <div class="wrap reveal">
       <div class="drop">
@@ -643,6 +679,71 @@
     } else if (glow) {
       glow.style.display = 'none';
     }
+
+    // Featured Lots -- fetched from the shop; section stays hidden entirely
+    // if there's nothing to show, same as the shop's Recently Sold section.
+    (function () {
+      var featuredSection = document.getElementById('featured');
+      var featuredGrid = document.getElementById('featuredGrid');
+
+      function initials(name) {
+        return (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
+      }
+
+      function money(cents) {
+        return '$' + (cents / 100).toFixed(2);
+      }
+
+      fetch('/api/lots/featured')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var lots = (data && data.lots) || [];
+          if (!lots.length) return;
+
+          lots.forEach(function (lot) {
+            var card = document.createElement('a');
+            card.className = 'featured-card';
+            card.href = '/surplus/shop/lot/?id=' + encodeURIComponent(lot.id);
+
+            var thumbWrap = document.createElement('div');
+            thumbWrap.className = 'featured-thumb-wrap';
+
+            var imageUrls = [];
+            try { imageUrls = lot.image_urls ? JSON.parse(lot.image_urls) : []; } catch (e) { imageUrls = []; }
+
+            if (imageUrls.length) {
+              thumbWrap.classList.add('has-image');
+              var img = document.createElement('img');
+              img.src = imageUrls[0];
+              img.alt = '';
+              thumbWrap.appendChild(img);
+            } else {
+              var initialsEl = document.createElement('div');
+              initialsEl.className = 'initials';
+              initialsEl.textContent = initials(lot.name);
+              thumbWrap.appendChild(initialsEl);
+            }
+
+            var info = document.createElement('div');
+            info.className = 'featured-info';
+            var nameEl = document.createElement('div');
+            nameEl.className = 'featured-name';
+            nameEl.textContent = lot.name;
+            var priceEl = document.createElement('div');
+            priceEl.className = 'featured-price';
+            priceEl.textContent = money(lot.website_price_cents);
+            info.appendChild(nameEl);
+            info.appendChild(priceEl);
+
+            card.appendChild(thumbWrap);
+            card.appendChild(info);
+            featuredGrid.appendChild(card);
+          });
+
+          featuredSection.style.display = '';
+        })
+        .catch(function () { /* leave the section hidden on any fetch failure */ });
+    })();
 
     // Scroll-triggered reveal for each section, once each
     var revealEls = document.querySelectorAll('.reveal');

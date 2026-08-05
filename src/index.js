@@ -3,6 +3,7 @@
 // Public routes:
 //   GET  /api/lots              -> list available lots (public)
 //   GET  /api/lots/sold         -> recently sold lots, for the "Recently Sold" trust section (public)
+//   GET  /api/lots/featured     -> top-profit featured lots, for the public "Featured Lots" section (public)
 //   GET  /api/lots/:id          -> single lot detail, any status (public)
 //   POST /api/checkout          -> create a Stripe Checkout session (requires login)
 //   POST /api/webhook/stripe    -> Stripe calls this when payment completes
@@ -99,6 +100,16 @@ async function handleListLots(env) {
 async function handleListSoldLots(env) {
   const { results } = await env.DB.prepare(
     "SELECT id, name, category, website_price_cents, image_urls, updated_at FROM lots WHERE status = 'sold' ORDER BY updated_at DESC LIMIT 8"
+  ).all();
+  return json({ lots: results });
+}
+
+async function handleListFeaturedLots(env) {
+  // Never select or expose original cost / profit here -- those figures
+  // don't exist in D1 at all, only in Excel (Original Price / Profit are
+  // PRIVATE columns that never sync).
+  const { results } = await env.DB.prepare(
+    "SELECT id, name, category, website_price_cents, image_urls FROM lots WHERE status = 'available' AND is_featured = 1 ORDER BY updated_at DESC LIMIT 6"
   ).all();
   return json({ lots: results });
 }
@@ -460,6 +471,11 @@ async function handleSyncLot(request, env) {
   const clearImages = ["1", "true", "yes"].includes(
     (formData.get("clear_images") || "").toString().trim().toLowerCase()
   );
+  const isFeatured = ["1", "true", "yes"].includes(
+    (formData.get("featured") || "").toString().trim().toLowerCase()
+  )
+    ? 1
+    : 0;
 
   if (!id || !name) {
     return json({ error: "id and name are required" }, 400);
@@ -496,17 +512,17 @@ async function handleSyncLot(request, env) {
     await env.DB.prepare(
       `UPDATE lots SET
          name = ?, category = ?, description = ?, website_price_cents = ?,
-         status = ?, image_urls = ?, updated_at = datetime('now')
+         status = ?, image_urls = ?, is_featured = ?, updated_at = datetime('now')
        WHERE id = ?`
     )
-      .bind(name, category, description, websitePriceCents, status, JSON.stringify(finalImageUrls), id)
+      .bind(name, category, description, websitePriceCents, status, JSON.stringify(finalImageUrls), isFeatured, id)
       .run();
   } else {
     await env.DB.prepare(
-      `INSERT INTO lots (id, name, category, description, website_price_cents, status, image_urls)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO lots (id, name, category, description, website_price_cents, status, image_urls, is_featured)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-      .bind(id, name, category, description, websitePriceCents, status, JSON.stringify(finalImageUrls))
+      .bind(id, name, category, description, websitePriceCents, status, JSON.stringify(finalImageUrls), isFeatured)
       .run();
   }
 
@@ -539,6 +555,9 @@ export default {
     }
     if (url.pathname === "/api/lots/sold" && request.method === "GET") {
       return handleListSoldLots(env);
+    }
+    if (url.pathname === "/api/lots/featured" && request.method === "GET") {
+      return handleListFeaturedLots(env);
     }
     if (url.pathname.startsWith("/api/lots/") && request.method === "GET") {
       const id = decodeURIComponent(url.pathname.slice("/api/lots/".length));
