@@ -43,7 +43,7 @@
   img,svg{ display:block; max-width:100%; }
   a{ color:inherit; }
   @media (prefers-reduced-motion: reduce){
-    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+    *{ animation-duration:0.01ms !important; animation-delay:0s !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; transition-delay:0s !important; scroll-behavior:auto !important; }
   }
   .wrap{ max-width:1180px; margin:0 auto; padding:0 28px; }
   a:focus-visible, button:focus-visible{ outline:3px solid var(--cyan); outline-offset:3px; }
@@ -63,6 +63,11 @@
   /* ---------- scroll reveal ---------- */
   .reveal{ opacity:0; transform:translateY(30px); transition:opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1); }
   .reveal.is-visible{ opacity:1; transform:translateY(0); }
+  .stagger-children > *{
+    opacity:0; transform:translateY(24px);
+    transition:opacity .6s cubic-bezier(.2,.7,.2,1), transform .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .stagger-children > *.is-visible{ opacity:1; transform:translateY(0); }
 
   /* ---------- surreal animated background ---------- */
   .bg-scene{
@@ -145,19 +150,23 @@
   .hero h1{
     font-family:var(--display); font-weight:700; font-size:clamp(46px, 8.4vw, 92px);
     line-height:0.94; letter-spacing:0.005em; margin:0 0 22px; color:var(--paper);
-    opacity:0; transform:translateY(14px); animation:riseIn .7s ease .08s forwards;
   }
   .hero h1 .grad{
     background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
   }
+  .kinetic-line{ display:block; opacity:0; transform:translateY(28px); animation:riseIn .7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .kinetic-line:nth-child(1){ animation-delay:0.05s; }
+  .kinetic-line:nth-child(2){ animation-delay:0.14s; }
+  .kinetic-line:nth-child(3){ animation-delay:0.23s; }
+  .kinetic-line:nth-child(4){ animation-delay:0.32s; }
 
   .hero p.lede{
     font-size:17px; color:var(--muted); max-width:46ch; margin:0 0 32px;
-    opacity:0; transform:translateY(14px); animation:riseIn .7s ease .16s forwards;
+    opacity:0; transform:translateY(14px); animation:riseIn .7s ease .42s forwards;
   }
   .hero p.lede strong{ color:var(--paper); font-weight:600; }
 
-  .cta-row{ display:flex; flex-wrap:wrap; gap:14px; opacity:0; transform:translateY(14px); animation:riseIn .7s ease .24s forwards; }
+  .cta-row{ display:flex; flex-wrap:wrap; gap:14px; opacity:0; transform:translateY(14px); animation:riseIn .7s ease .5s forwards; }
   .btn{
     font-family:var(--mono); font-size:13.5px; letter-spacing:0.04em; text-transform:uppercase;
     padding:14px 22px; text-decoration:none; display:inline-flex; align-items:center; gap:10px;
@@ -175,7 +184,7 @@
   /* ---------- waveform ---------- */
   .wave-wrap{
     display:flex; justify-content:center; align-items:center;
-    opacity:0; animation:fadeIn .6s ease .45s forwards;
+    opacity:0; animation:fadeIn .6s ease .55s forwards;
   }
   @keyframes fadeIn{ to{ opacity:1; } }
   @keyframes pulseBar{ 0%,100%{ transform:scaleY(0.55); } 50%{ transform:scaleY(1); } }
@@ -201,6 +210,7 @@
     white-space:nowrap; align-items:center; text-transform:uppercase;
   }
   .marquee-track span.dot{ color:var(--pink); font-size:10px; }
+  .marquee:hover .marquee-track{ animation-play-state:paused; }
   @keyframes marqueeScroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
 
   /* ---------- hero waveform badge ---------- */
@@ -260,6 +270,15 @@
     line-height:1.02; margin:0 0 14px; color:var(--paper);
   }
   .section-sub{ color:var(--muted); font-size:16px; max-width:56ch; }
+
+  /* ---------- stats bar ---------- */
+  .stats{ padding:56px 0; }
+  .stats-row{ display:flex; flex-wrap:wrap; justify-content:center; gap:48px; text-align:center; }
+  .stat-num{
+    font-family:var(--display); font-weight:700; font-size:clamp(32px, 5vw, 48px); line-height:1;
+    background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .stat-label{ font-family:var(--mono); font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-top:8px; }
 
   /* ---------- track cards (categories) ---------- */
   .track-grid{ display:grid; gap:22px; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); }
@@ -401,7 +420,7 @@
     <div class="wrap hero-grid">
       <div>
         <div class="eyebrow">Track 001 — Now Playing</div>
-        <h1>Government<br>surplus,<br><span class="grad">verified</span> &amp; dropped<br>weekly.</h1>
+        <h1><span class="kinetic-line">Government</span><span class="kinetic-line">surplus,</span><span class="kinetic-line"><span class="grad">verified</span> &amp; dropped</span><span class="kinetic-line">weekly.</span></h1>
         <p class="lede">We bid on public auction lots — electronics, coins, tools, the occasional industrial robot arm — <strong>check every one by hand</strong> before it's ever listed, and pass on the real find, not the auction-description hype.</p>
         <div class="cta-row">
           <a href="/surplus/shop/" class="btn btn-primary">Shop All Lots</a>
@@ -466,6 +485,25 @@
     </div>
   </div>
 
+  <section id="stats" class="stats">
+    <div class="wrap reveal" id="statsWrap">
+      <div class="stats-row stagger-children">
+        <div class="stat" id="statSold" style="display:none;">
+          <div class="stat-num" data-count-to="0">0</div>
+          <div class="stat-label">Lots Sold</div>
+        </div>
+        <div class="stat" id="statCategories" style="display:none;">
+          <div class="stat-num" data-count-to="0">0</div>
+          <div class="stat-label">Categories Sourced</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" data-count-to="100" data-suffix="%">0</div>
+          <div class="stat-label">Hand-Inspected</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="lineup">
     <div class="wrap reveal">
       <div class="section-head">
@@ -473,7 +511,7 @@
         <h2 class="section-title">What comes through here</h2>
         <p class="section-sub">A little of everything, because that's what surplus auctions actually look like. Every category gets the same treatment: checked, tested, called out honestly.</p>
       </div>
-      <div class="track-grid">
+      <div class="track-grid stagger-children">
         <div class="track">
           <div class="track-icon"><span style="height:40%"></span><span style="height:100%"></span><span style="height:60%"></span><span style="height:80%"></span><span style="height:35%"></span></div>
           <div class="track-num">Track 014</div>
@@ -515,7 +553,7 @@
         <h2 class="section-title">How it ends up here</h2>
         <p class="section-sub">Same four steps, every lot, no exceptions — right up until the drop.</p>
       </div>
-      <div class="process">
+      <div class="process stagger-children">
         <div class="process-step">
           <div class="process-num">01</div>
           <h4>Win the lot</h4>
@@ -547,7 +585,7 @@
         <h2 class="section-title">Bought from someone who checks</h2>
         <p class="section-sub">Auction listings guess. We don't ship a guess.</p>
       </div>
-      <div class="why-grid">
+      <div class="why-grid stagger-children">
         <div class="why-item">
           <div class="why-mark">＄</div>
           <div><h4>Priced from real research</h4><p>Every price is checked against current sold comps — not the auction description's adjectives.</p></div>
@@ -627,7 +665,7 @@
           <h3>This week's drop is live on Facebook Marketplace.</h3>
           <p>New lots go up as they're won, cleaned, and priced — usually a few times a week. Follow along so you don't miss the good ones.</p>
         </div>
-        <div class="drop-ctas">
+        <div class="drop-ctas stagger-children">
           <a href="#" class="btn btn-primary">View on Facebook Marketplace</a>
           <a href="#" class="btn btn-ghost">Visit eBay Store</a>
         </div>
@@ -637,7 +675,7 @@
 
   <footer>
     <div class="wrap reveal">
-      <div class="footer-grid">
+      <div class="footer-grid stagger-children">
         <div>
           <div class="footer-word">HOLLY HILL<span class="wordmark-badge">Surplus</span></div>
           <div class="footer-tag">Priced as fair. Dropped as promised.</div>
@@ -745,20 +783,146 @@
         .catch(function () { /* leave the section hidden on any fetch failure */ });
     })();
 
-    // Scroll-triggered reveal for each section, once each
+    // Scroll-triggered reveal for each section, once each. Elements marked
+    // .stagger-children get their direct children staggered in one after
+    // another (via transition-delay) instead of all firing at once.
     var revealEls = document.querySelectorAll('.reveal');
+
+    function revealStaggerChildren(root) {
+      root.querySelectorAll('.stagger-children').forEach(function (group) {
+        Array.prototype.forEach.call(group.children, function (child, i) {
+          child.style.transitionDelay = (i * 90) + 'ms';
+          child.classList.add('is-visible');
+        });
+      });
+    }
+
     if ('IntersectionObserver' in window && !prefersReduced) {
       var io = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           if (entry.isIntersecting) {
             entry.target.classList.add('is-visible');
+            revealStaggerChildren(entry.target);
+            if (entry.target.id === 'statsWrap' && window.runStatsCountUp) {
+              window.runStatsCountUp();
+            }
             io.unobserve(entry.target);
           }
         });
       }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
       revealEls.forEach(function (el) { io.observe(el); });
     } else {
-      revealEls.forEach(function (el) { el.classList.add('is-visible'); });
+      revealEls.forEach(function (el) {
+        el.classList.add('is-visible');
+        el.querySelectorAll('.stagger-children > *').forEach(function (child) { child.classList.add('is-visible'); });
+      });
+    }
+
+    // Animated count-up on the stats bar -- starts when the stats section
+    // scrolls into view (triggered by the reveal observer above calling
+    // runStatsCountUp), never on page load. Under reduced motion every
+    // number is just set straight to its final value, no counting.
+    (function () {
+      var statsWrap = document.getElementById('statsWrap');
+      var soldStat = document.getElementById('statSold');
+      var soldNum = soldStat ? soldStat.querySelector('.stat-num') : null;
+      var categoriesStat = document.getElementById('statCategories');
+      var categoriesNum = categoriesStat ? categoriesStat.querySelector('.stat-num') : null;
+      var hasRun = false;
+
+      function animateCount(el) {
+        var target = parseFloat(el.getAttribute('data-count-to'));
+        if (!isFinite(target)) return;
+        var suffix = el.getAttribute('data-suffix') || '';
+        if (prefersReduced) {
+          el.textContent = Math.round(target) + suffix;
+          return;
+        }
+        var start = null;
+        var duration = 1200;
+        function step(ts) {
+          if (start === null) start = ts;
+          var progress = Math.min((ts - start) / duration, 1);
+          var eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = Math.round(target * eased) + suffix;
+          if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+
+      function countUpVisible() {
+        if (!statsWrap) return;
+        statsWrap.querySelectorAll('.stat-num').forEach(function (el) {
+          if (el.closest('.stat').style.display === 'none') return;
+          animateCount(el);
+        });
+      }
+
+      window.runStatsCountUp = function () {
+        if (hasRun) return;
+        hasRun = true;
+        countUpVisible();
+      };
+
+      // No IntersectionObserver support, or reduced motion -- the reveal
+      // fallback above already made everything visible synchronously, so
+      // count up (or snap to final values, under reduced motion) right away.
+      if (prefersReduced || !('IntersectionObserver' in window)) {
+        window.runStatsCountUp();
+      }
+
+      function revealStat(statEl, numEl, count) {
+        if (count === null || !statEl || !numEl) return;
+        numEl.setAttribute('data-count-to', String(count));
+        statEl.style.display = '';
+        if (hasRun) animateCount(numEl);
+      }
+
+      fetch('/api/lots/sold/count')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var count = data && typeof data.count === 'number' ? data.count : null;
+          revealStat(soldStat, soldNum, count);
+        })
+        .catch(function () { /* leave the Lots Sold tile hidden on failure */ });
+
+      // Distinct category count among currently-available lots -- same
+      // counting technique as the shop page's buildCategoryFilters
+      // (l.category || 'Surplus', then the number of distinct keys).
+      fetch('/api/lots')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var lots = (data && data.lots) || [];
+          if (!lots.length) return;
+          var counts = {};
+          lots.forEach(function (l) {
+            var cat = l.category || 'Surplus';
+            counts[cat] = (counts[cat] || 0) + 1;
+          });
+          revealStat(categoriesStat, categoriesNum, Object.keys(counts).length);
+        })
+        .catch(function () { /* leave the Categories Sourced tile hidden on failure */ });
+    })();
+
+    // Subtle magnetic tilt on primary CTA buttons -- mouse-only (same
+    // hover:hover gate as the cursor glow above), capped low so it reads as
+    // a gentle wobble rather than a gimmick. Never attached on touch
+    // devices, and skipped entirely under reduced motion.
+    if (!prefersReduced && window.matchMedia('(hover:hover)').matches) {
+      var MAX_TILT_DEG = 6;
+      document.querySelectorAll('.btn-primary').forEach(function (btn) {
+        btn.addEventListener('mousemove', function (e) {
+          var rect = btn.getBoundingClientRect();
+          var px = (e.clientX - rect.left) / rect.width - 0.5;
+          var py = (e.clientY - rect.top) / rect.height - 0.5;
+          var rotY = px * MAX_TILT_DEG * 2;
+          var rotX = py * -MAX_TILT_DEG * 2;
+          btn.style.transform = 'perspective(600px) rotateX(' + rotX.toFixed(2) + 'deg) rotateY(' + rotY.toFixed(2) + 'deg) translateY(-2px)';
+        });
+        btn.addEventListener('mouseleave', function () {
+          btn.style.transform = '';
+        });
+      });
     }
   </script>
 
