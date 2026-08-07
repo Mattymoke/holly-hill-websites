@@ -23,6 +23,7 @@
 // not Clerk auth -- these are for the Excel-to-website sync helper scripts):
 //   POST /api/admin/sync-lot     -> upsert a lot + upload its photos to R2
 //   GET  /api/sync/lots          -> id/status/updated_at for every lot, for two-way sync
+//   GET  /api/sync/orders        -> orders + buyer/lot info, for the read-only Sold Lots tracker
 //
 // Requires these secrets:
 //   wrangler secret put STRIPE_SECRET_KEY
@@ -301,12 +302,13 @@ async function handleStripeWebhook(request, env, ctx) {
     const session = event.data.object;
     const orderId = session.metadata.order_id;
     const lotId = session.metadata.lot_id;
+    const buyerEmail = (session.customer_details && session.customer_details.email) || null;
     console.log("Updating order:", orderId, "lot:", lotId);
 
     await env.DB.batch([
       env.DB.prepare(
-        "UPDATE orders SET status = 'paid', paid_at = datetime('now'), stripe_payment_intent_id = ? WHERE id = ?"
-      ).bind(session.payment_intent, orderId),
+        "UPDATE orders SET status = 'paid', paid_at = datetime('now'), stripe_payment_intent_id = ?, buyer_email = ? WHERE id = ?"
+      ).bind(session.payment_intent, buyerEmail, orderId),
       env.DB.prepare(
         "UPDATE lots SET status = 'sold', updated_at = datetime('now') WHERE id = ?"
       ).bind(lotId),
@@ -650,6 +652,21 @@ async function handleSyncLotsList(request, env) {
   return json({ lots: results });
 }
 
+async function handleSyncOrders(request, env) {
+  if (!isSyncAuthed(request, env)) {
+    return json({ error: "Not authorized" }, 401);
+  }
+
+  const { results } = await env.DB.prepare(
+    `SELECT o.id, o.lot_id, l.name AS lot_name, l.category, o.amount_cents,
+            o.buyer_email, o.status, o.created_at, o.paid_at
+     FROM orders o JOIN lots l ON l.id = o.lot_id
+     ORDER BY o.created_at DESC`
+  ).all();
+
+  return json({ orders: results });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -707,6 +724,9 @@ export default {
     }
     if (url.pathname === "/api/sync/lots" && request.method === "GET") {
       return handleSyncLotsList(request, env);
+    }
+    if (url.pathname === "/api/sync/orders" && request.method === "GET") {
+      return handleSyncOrders(request, env);
     }
 
     return env.ASSETS.fetch(request);

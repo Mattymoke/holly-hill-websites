@@ -2,8 +2,10 @@ excel-sync/config.ini
 excel-sync/pending_lot.json
 excel-sync/result.json
 excel-sync/remote_status.json
+excel-sync/sold_orders.json
 excel-sync/lots.xlsx
 excel-sync/lots.xlsm
+excel-sync/sold-lots.xlsm
 excel-sync/ebay_export.xlsx
 excel-sync/~$*
 excel-sync/__pycache__/

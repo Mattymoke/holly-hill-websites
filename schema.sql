@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS orders (
     stripe_checkout_session_id TEXT,
     stripe_payment_intent_id   TEXT,
     created_at          TEXT NOT NULL DEFAULT (datetime('now')),
-    paid_at             TEXT
+    paid_at             TEXT,
+    buyer_email         TEXT                     -- from Stripe checkout session; set when payment completes, not backfilled for older orders
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(clerk_user_id);
