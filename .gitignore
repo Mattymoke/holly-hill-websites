@@ -4,7 +4,10 @@ excel-sync/result.json
 excel-sync/remote_status.json
 excel-sync/lots.xlsx
 excel-sync/lots.xlsm
+excel-sync/ebay_export.xlsx
 excel-sync/~$*
+excel-sync/__pycache__/
+excel-sync/*.backup
 node_modules/
 .wrangler/
 .claude/
