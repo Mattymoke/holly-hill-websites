@@ -73,8 +73,9 @@
   .status-paid{ background:rgba(43,232,220,0.12); color:var(--cyan); }
   .status-pending{ background:rgba(255,255,255,0.08); color:var(--muted); }
   .status-failed, .status-refunded{ background:rgba(226,74,74,0.12); color:#F5A9A9; }
-  .row-actions{ display:flex; gap:6px; }
+  .row-actions{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   .price-edit{ width:80px; }
+  .row-photo-input{ font-size:10.5px; max-width:120px; color:var(--muted); }
   .empty-row td{ color:var(--muted); font-family:var(--mono); font-size:12px; text-align:center; padding:24px; }
   .table-scroll{ overflow-x:auto; }
 </style>
@@ -137,6 +138,10 @@
             <div class="field">
               <label for="f-price">Website price ($)</label>
               <input type="number" id="f-price" min="0" step="0.01" required placeholder="70.00">
+            </div>
+            <div class="field full">
+              <label for="f-images">Photos</label>
+              <input type="file" id="f-images" accept="image/*" capture="environment" multiple>
             </div>
           </div>
           <button type="submit" class="btn btn-primary" id="addLotBtn">Add Lot</button>
@@ -249,6 +254,7 @@
             '</select>' +
           '</td>' +
           '<td class="row-actions">' +
+            '<input type="file" class="row-photo-input" accept="image/*" capture="environment" multiple>' +
             '<button class="btn btn-ghost save-btn">Save</button>' +
             '<button class="btn btn-danger delete-btn">Delete</button>' +
           '</td>';
@@ -272,7 +278,9 @@
         tr.querySelector('.save-btn').addEventListener('click', function () {
           var newPrice = Math.round(parseFloat(tr.querySelector('.price-edit').value) * 100);
           var newStatus = tr.querySelector('.status-select').value;
-          updateLot(lot.id, { website_price_cents: newPrice, status: newStatus });
+          var photoInput = tr.querySelector('.row-photo-input');
+          var files = photoInput ? Array.from(photoInput.files || []) : [];
+          updateLot(lot.id, { website_price_cents: newPrice, status: newStatus }, files);
         });
         tr.querySelector('.delete-btn').addEventListener('click', function () {
           if (confirm('Delete lot ' + lot.id + '? This cannot be undone.')) {
@@ -316,13 +324,21 @@
       renderOrders(data.orders || []);
     }
 
-    async function updateLot(id, fields) {
+    async function updateLot(id, fields, files) {
       hideStatus();
       try {
+        var fd = new FormData();
+        fd.append('id', id);
+        Object.keys(fields).forEach(function (key) {
+          fd.append(key, fields[key]);
+        });
+        (files || []).forEach(function (file) {
+          fd.append('images', file);
+        });
         var res = await fetch('/api/admin/lots/update', {
           method: 'POST',
-          headers: Object.assign({ 'Content-Type': 'application/json' }, await authHeader()),
-          body: JSON.stringify(Object.assign({ id: id }, fields)),
+          headers: await authHeader(),
+          body: fd,
         });
         if (!res.ok) throw new Error();
         showStatus('Saved.', 'success');
@@ -354,16 +370,19 @@
       addLotBtn.disabled = true;
       addLotBtn.textContent = 'Adding...';
       try {
+        var fd = new FormData();
+        fd.append('id', document.getElementById('f-id').value.trim());
+        fd.append('name', document.getElementById('f-name').value.trim());
+        fd.append('category', document.getElementById('f-category').value);
+        fd.append('description', document.getElementById('f-desc').value.trim());
+        fd.append('website_price_cents', Math.round(parseFloat(document.getElementById('f-price').value) * 100));
+        Array.from(document.getElementById('f-images').files || []).forEach(function (file) {
+          fd.append('images', file);
+        });
         var res = await fetch('/api/admin/lots/create', {
           method: 'POST',
-          headers: Object.assign({ 'Content-Type': 'application/json' }, await authHeader()),
-          body: JSON.stringify({
-            id: document.getElementById('f-id').value.trim(),
-            name: document.getElementById('f-name').value.trim(),
-            category: document.getElementById('f-category').value,
-            description: document.getElementById('f-desc').value.trim(),
-            website_price_cents: Math.round(parseFloat(document.getElementById('f-price').value) * 100),
-          }),
+          headers: await authHeader(),
+          body: fd,
         });
         var data = await res.json();
         if (!res.ok) {

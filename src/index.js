@@ -79,6 +79,18 @@ function sanitizeFilename(name) {
   return (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+async function uploadLotImages(env, id, files) {
+  const newImageUrls = [];
+  for (const file of files) {
+    const key = `${id}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
+    await env.IMAGES.put(key, file, {
+      httpMetadata: { contentType: file.type || "application/octet-stream" },
+    });
+    newImageUrls.push(`https://hollyhillohio.com/media/${encodeURIComponent(key)}`);
+  }
+  return newImageUrls;
+}
+
 async function handleMedia(env, key) {
   const object = await env.IMAGES.get(key);
   if (!object) return new Response("Not found", { status: 404 });
@@ -439,19 +451,26 @@ async function handleAdminCreateLot(request, env) {
   const adminId = await getAdminUserId(request, env);
   if (!adminId) return json({ error: "Not authorized" }, 403);
 
-  const body = await request.json();
-  const { id, name, category, description, website_price_cents } = body;
+  const formData = await request.formData();
+  const id = (formData.get("id") || "").toString().trim();
+  const name = (formData.get("name") || "").toString().trim();
+  const category = formData.get("category") ? formData.get("category").toString().trim() : null;
+  const description = formData.get("description") ? formData.get("description").toString().trim() : null;
+  const websitePriceCents = Number(formData.get("website_price_cents"));
 
-  if (!id || !name || !website_price_cents) {
+  if (!id || !name || !Number.isInteger(websitePriceCents) || websitePriceCents < 0) {
     return json({ error: "id, name, and website_price_cents are required" }, 400);
   }
 
+  const files = formData.getAll("images").filter((f) => f instanceof File && f.size > 0);
+  const imageUrls = await uploadLotImages(env, id, files);
+
   try {
     await env.DB.prepare(
-      `INSERT INTO lots (id, name, category, description, website_price_cents, status)
-       VALUES (?, ?, ?, ?, ?, 'available')`
+      `INSERT INTO lots (id, name, category, description, website_price_cents, status, image_urls)
+       VALUES (?, ?, ?, ?, ?, 'available', ?)`
     )
-      .bind(id, name, category || null, description || null, website_price_cents)
+      .bind(id, name, category, description, websitePriceCents, JSON.stringify(imageUrls))
       .run();
   } catch (err) {
     return json({ error: "Could not create lot — that Lot # might already exist" }, 409);
@@ -464,9 +483,36 @@ async function handleAdminUpdateLot(request, env) {
   const adminId = await getAdminUserId(request, env);
   if (!adminId) return json({ error: "Not authorized" }, 403);
 
-  const body = await request.json();
-  const { id, name, category, description, website_price_cents, status } = body;
+  const formData = await request.formData();
+  const id = (formData.get("id") || "").toString().trim();
   if (!id) return json({ error: "id is required" }, 400);
+
+  const name = formData.get("name") ? formData.get("name").toString().trim() : null;
+  const category = formData.get("category") ? formData.get("category").toString().trim() : null;
+  const description = formData.get("description") ? formData.get("description").toString().trim() : null;
+  const websitePriceCentsRaw = formData.get("website_price_cents");
+  const websitePriceCents =
+    websitePriceCentsRaw !== null && websitePriceCentsRaw !== "" ? Number(websitePriceCentsRaw) : null;
+  const status = formData.get("status") ? formData.get("status").toString().trim() : null;
+
+  // Photos append to whatever's already on the lot -- same behavior as
+  // the Excel sync-lot endpoint. Only touched when files are actually
+  // provided, so a plain price/status save doesn't disturb image_urls.
+  const files = formData.getAll("images").filter((f) => f instanceof File && f.size > 0);
+  let imageUrlsUpdate = null;
+  if (files.length) {
+    const newImageUrls = await uploadLotImages(env, id, files);
+    const existing = await env.DB.prepare("SELECT image_urls FROM lots WHERE id = ?").bind(id).first();
+    let finalImageUrls = newImageUrls;
+    if (existing?.image_urls) {
+      try {
+        finalImageUrls = JSON.parse(existing.image_urls).concat(newImageUrls);
+      } catch (err) {
+        finalImageUrls = newImageUrls;
+      }
+    }
+    imageUrlsUpdate = JSON.stringify(finalImageUrls);
+  }
 
   await env.DB.prepare(
     `UPDATE lots SET
@@ -475,15 +521,17 @@ async function handleAdminUpdateLot(request, env) {
        description = COALESCE(?, description),
        website_price_cents = COALESCE(?, website_price_cents),
        status = COALESCE(?, status),
+       image_urls = COALESCE(?, image_urls),
        updated_at = datetime('now')
      WHERE id = ?`
   )
     .bind(
-      name ?? null,
-      category ?? null,
-      description ?? null,
-      website_price_cents ?? null,
-      status ?? null,
+      name,
+      category,
+      description,
+      websitePriceCents,
+      status,
+      imageUrlsUpdate,
       id
     )
     .run();
@@ -551,14 +599,7 @@ async function handleSyncLot(request, env) {
   }
 
   const files = formData.getAll("images").filter((f) => f instanceof File && f.size > 0);
-  const newImageUrls = [];
-  for (const file of files) {
-    const key = `${id}-${crypto.randomUUID()}-${sanitizeFilename(file.name)}`;
-    await env.IMAGES.put(key, file, {
-      httpMetadata: { contentType: file.type || "application/octet-stream" },
-    });
-    newImageUrls.push(`https://hollyhillohio.com/media/${encodeURIComponent(key)}`);
-  }
+  const newImageUrls = await uploadLotImages(env, id, files);
 
   const existing = await env.DB.prepare("SELECT image_urls FROM lots WHERE id = ?").bind(id).first();
 
